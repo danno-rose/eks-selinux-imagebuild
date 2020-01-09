@@ -1,0 +1,200 @@
+schemaVersion: "0.3"
+description: SSM Document to create custom eks-ami
+assumeRole: ${automation_role}
+parameters:
+  amiId:
+    type: String
+    description: base ami to build from
+    default: "${source_ami_id}"
+  instanceType:
+    type: String
+    description:
+    default: ${instance_size}
+  SSMInstallationUserData:
+    type: String
+    description: userdata installing ssm - used when launching inital instance (base64Encoded)
+    default: "IyEvYmluL2Jhc2gKY2QgL3RtcApzdWRvIHl1bSBpbnN0YWxsIC15IGh0dHBzOi8vczMuYW1hem9uYXdzLmNvbS9lYzItZG93bmxvYWRzLXdpbmRvd3MvU1NNQWdlbnQvbGF0ZXN0L2xpbnV4X2FtZDY0L2FtYXpvbi1zc20tYWdlbnQucnBtCnN1ZG8gc3lzdGVtY3RsIGVuYWJsZSBhbWF6b24tc3NtLWFnZW50CnN1ZG8gc3lzdGVtY3RsIHN0YXJ0IGFtYXpvbi1zc20tYWdlbnQ="
+  subnetID:
+    type: String
+    description:
+    default: ${subnet_id}
+  securityGroupID:
+    type: String
+    description:
+    default: ${securitygroup_id}
+  IAMInstanceProfile:
+    type: String
+    description:
+    default: ${instance_profile_name}
+  buildFilesRepo:
+    type: String
+    description:
+    default: ${buildfiles_repo}
+  terminateInstanceOnFailure:
+    type: Boolean
+    description: (Optional) Terminate the instance when build failed
+    default: true
+  cleanAndCreate:
+    type: Boolean
+    description: (Optional) Clean up and create AMI on success
+    default: true
+  # kubernetesVersion:
+  #   type: String
+  #   description: version of kubernetes to install
+  #   default: "1.14.6"
+  # kubernetesBuildDate:
+  #   type: String
+  #   description: build date of kubernetes to install
+  #   default: "2019-08-22"
+  # cniVersion:
+  #   type: String
+  #   description: version of cni to install
+  #   default: "1.14.6"
+  # cniPluginVersion:
+  #   type: String
+  #   description: version of cni plugin to install
+  #   default: "v0.7.5"
+  # dockerVersion:
+  #   type: String
+  #   description: version of docker to install
+  #   default: "18.09.9ce-2.amzn2"
+  # installfilesBinaryBucket:
+  #   type: String
+  #   description: amazon owned bucket with kubernetes files to install
+  #   default: "amazon-eks"
+  # binaryBucketRegion:
+  #   type: String
+  #   description: amazon owned bucket with kubernetes files to install
+  #   default: "us-west-2"
+
+mainSteps:
+  - name: startInstances
+    action: "aws:runInstances"
+    timeoutSeconds: 3600
+    maxAttempts: 1
+    onFailure: Abort
+    inputs:
+      ImageId: "{{ amiId }}"
+      InstanceType: "{{instanceType}}"
+      MinInstanceCount: 1
+      MaxInstanceCount: 1
+      SubnetId: "{{ subnetID }}"
+      SecurityGroupIds:
+        - "{{ securityGroupID }}"
+      UserData: "{{SSMInstallationUserData}}"
+      IamInstanceProfileName: "{{ IAMInstanceProfile }}"
+  - name: installPreReqs
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 300
+    onFailure: "step:FailureHandling"
+    inputs:
+      DocumentName: AWS-RunShellScript
+      # OutputS3BucketName:
+      #   Ref: GoldenAMIConfigBucket
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      Parameters:
+        commands:
+          - yum install -y git
+  - name: runSELinuxScript
+    action: "aws:runCommand"
+    maxAttempts: 3
+    timeoutSeconds: 3600
+    onFailure: "step:FailureHandling"
+    nextStep: "cleanAndCreateImageBranch"
+    inputs:
+      DocumentName: AWS-RunShellScript
+      # OutputS3BucketName:
+      #   Ref: GoldenAMIConfigBucket
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      Parameters:
+        commands:
+          - git clone {{ buildFilesRepo }}
+          - cd ${scripts_path}
+          - chmod +x selinux.sh
+          - source selinux.sh
+          - echo $(getenforce)
+    outputs:
+      -
+  - name: cleanAndCreateImageBranch
+    action: "aws:branch"
+    inputs:
+      Choices:
+        - NextStep: stopInstance
+          Variable: "{{cleanAndCreate}}"
+          BooleanEquals: true
+          default: FailureHandling
+  - name: stopInstance
+    action: "aws:changeInstanceState"
+    timeoutSeconds: 1200
+    maxAttempts: 1
+    onFailure: "step:FailureHandling"
+    nextStep: "CreateImage"
+    inputs:
+      InstanceIds:
+        - "{{ startInstances.InstanceIds }}"
+      DesiredState: stopped
+  # - name: CreateImage
+  #   action: "aws:createImage"
+  #   maxAttempts: 3
+  #   nextStep: CreateImageTags
+  #   inputs:
+  #     InstanceId: "{{startInstances.InstanceIds}}"
+  #     ImageName: "{{imageName}}"
+  #     ImageDescription: "{{imageDescription}}"
+  #   onFailure: "step:FailureHandling"
+  # - name: CreateImageTags
+  #   action: "aws:createTags"
+  #   maxAttempts: 3
+  #   nextStep: terminateInstance
+  #   onFailure: "step:FailureHandling"
+  #   inputs:
+  #     ResourceType: EC2
+  #     ResourceIds:
+  #       - "{{CreateImage.ImageId}}"
+  #     Tags: "{{imageTags}}"
+  - name: terminateInstance
+    action: "aws:changeInstanceState"
+    timeoutSeconds: 1200
+    maxAttempts: 1
+    onFailure: Continue
+    nextStep: endBuild
+    inputs:
+      InstanceIds:
+        - "{{ startInstances.InstanceIds }}"
+      DesiredState: terminated
+  - name: endBuild
+    action: "aws:sleep"
+    maxAttempts: 3
+    isCritical: false
+    isEnd: true
+    onFailure: Continue
+    inputs:
+      Duration: PT5S
+  - name: FailureHandling
+    action: "aws:branch"
+    inputs:
+      Choices:
+        - NextStep: TerminateInstanceOnFailure
+          Variable: "{{terminateInstanceOnFailure}}"
+          BooleanEquals: true
+  - name: TerminateInstanceOnFailure
+    action: "aws:changeInstanceState"
+    maxAttempts: 3
+    isCritical: false
+    nextStep: EndFailureHandlingBranch
+    onFailure: Continue
+    inputs:
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      DesiredState: terminated
+  - name: EndFailureHandlingBranch
+    action: "aws:sleep"
+    maxAttempts: 3
+    isCritical: false
+    isEnd: true
+    onFailure: Continue
+    inputs:
+      Duration: PT5S
