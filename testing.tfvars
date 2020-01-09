@@ -5,5 +5,3 @@ ssm_automation_role           = "arn:aws:iam::752991339866:role/test-ssm-automat
 ssm_source_ami_id             = "ami-03772b2e67db0c87b"
 ssm_instance_size             = "c5.large"
 ssm_instance_buildfiles_repo  = "https://github.com/danno-rose/eks-selinux-imagebuild.git"
-
-

@@ -4,7 +4,7 @@ assumeRole: ${automation_role}
 parameters:
   amiId:
     type: String
-    description: base ami to build from
+    description: base ami to build from (we are using Amazon Linux 2 EKS-Optimized-AMI)
     default: "${source_ami_id}"
   instanceType:
     type: String
@@ -111,11 +111,11 @@ mainSteps:
         - "{{startInstances.InstanceIds}}"
       Parameters:
         commands:
-          - mkdir buildfiles
-          - git clone {{ buildFilesRepo }} buildfiles
-          - cd buildfiles
-          - chmod +x selinux
-          - selinux
+          - mkdir /buildfiles
+          - git clone {{ buildFilesRepo }} /buildfiles
+          - ls -lah /buildfiles
+          - chmod +x /buildfiles/selinux
+          - /buildfiles/selinux
           - echo $(getenforce)
   - name: cleanAndCreateBranch
     action: "aws:branch"
