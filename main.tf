@@ -14,6 +14,6 @@ resource "aws_ssm_document" "eks_selinux" {
     securitygroup_id      = var.ssm_instance_securitygroup_id
     instance_profile_name = var.ssm_instance_profile_name
     buildfiles_repo       = var.ssm_instance_buildfiles_repo
-    scripts_path          = split(".", split("/", var.ssm_instance_buildfiles_repo)[4])[0]
+    #    scripts_path          = split(".", split("/", var.ssm_instance_buildfiles_repo)[4])[0]
   })
 }

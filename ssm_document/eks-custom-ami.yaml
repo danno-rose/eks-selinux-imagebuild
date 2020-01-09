@@ -102,7 +102,7 @@ mainSteps:
     maxAttempts: 3
     timeoutSeconds: 3600
     onFailure: "step:FailureHandling"
-    nextStep: "cleanAndCreateImageBranch"
+    nextStep: "cleanAndCreateBranch"
     inputs:
       DocumentName: AWS-RunShellScript
       # OutputS3BucketName:
@@ -111,27 +111,26 @@ mainSteps:
         - "{{startInstances.InstanceIds}}"
       Parameters:
         commands:
-          - git clone {{ buildFilesRepo }}
-          - cd ${scripts_path}
-          - chmod +x selinux.sh
-          - source selinux.sh
+          - mkdir buildfiles
+          - git clone {{ buildFilesRepo }} buildfiles
+          - cd buildfiles
+          - chmod +x selinux
+          - selinux
           - echo $(getenforce)
-    outputs:
-      -
-  - name: cleanAndCreateImageBranch
+  - name: cleanAndCreateBranch
     action: "aws:branch"
     inputs:
       Choices:
         - NextStep: stopInstance
           Variable: "{{cleanAndCreate}}"
           BooleanEquals: true
-          default: FailureHandling
+      Default: terminateInstance
   - name: stopInstance
     action: "aws:changeInstanceState"
     timeoutSeconds: 1200
     maxAttempts: 1
     onFailure: "step:FailureHandling"
-    nextStep: "CreateImage"
+    #  nextStep: "CreateImage"
     inputs:
       InstanceIds:
         - "{{ startInstances.InstanceIds }}"
