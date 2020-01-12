@@ -38,35 +38,6 @@ parameters:
     type: Boolean
     description: (Optional) Clean up and create AMI on success
     default: true
-  # kubernetesVersion:
-  #   type: String
-  #   description: version of kubernetes to install
-  #   default: "1.14.6"
-  # kubernetesBuildDate:
-  #   type: String
-  #   description: build date of kubernetes to install
-  #   default: "2019-08-22"
-  # cniVersion:
-  #   type: String
-  #   description: version of cni to install
-  #   default: "1.14.6"
-  # cniPluginVersion:
-  #   type: String
-  #   description: version of cni plugin to install
-  #   default: "v0.7.5"
-  # dockerVersion:
-  #   type: String
-  #   description: version of docker to install
-  #   default: "18.09.9ce-2.amzn2"
-  # installfilesBinaryBucket:
-  #   type: String
-  #   description: amazon owned bucket with kubernetes files to install
-  #   default: "amazon-eks"
-  # binaryBucketRegion:
-  #   type: String
-  #   description: amazon owned bucket with kubernetes files to install
-  #   default: "us-west-2"
-
 mainSteps:
   - name: startInstances
     action: "aws:runInstances"
