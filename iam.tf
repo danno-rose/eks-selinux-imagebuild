@@ -139,7 +139,7 @@ EOF
 
 # Role Policy
 resource "aws_iam_policy" "ssm_build_automation_role_policy" {
-  name   = "ssm-eks-selinux-automation-erole-policy"
+  name   = "ssm-eks-selinux-automation-role-policy"
   path   = "/"
   policy = data.aws_iam_policy_document.ssm_build_automation_role_policy_doc.json
 }
