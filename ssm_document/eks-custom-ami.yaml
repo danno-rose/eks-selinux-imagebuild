@@ -38,6 +38,11 @@ parameters:
     type: Boolean
     description: (Optional) Clean up and create AMI on success
     default: true
+  scanFactorySNS:
+    type: String
+    description: sns topic for scan factory
+    default: arn:aws:sns:eu-west-1:618840856400:scan_factory_ami_submissions_v2
+
 mainSteps:
   - name: startInstances
     action: "aws:runInstances"
@@ -54,6 +59,7 @@ mainSteps:
         - "{{ securityGroupID }}"
       UserData: "{{SSMInstallationUserData}}"
       IamInstanceProfileName: "{{ IAMInstanceProfile }}"
+
   - name: installPreReqs
     action: aws:runCommand
     maxAttempts: 3
@@ -68,6 +74,7 @@ mainSteps:
       Parameters:
         commands:
           - yum install -y git
+
   - name: runSELinuxScript
     action: "aws:runCommand"
     maxAttempts: 3
@@ -88,14 +95,20 @@ mainSteps:
           - chmod +x /buildfiles/selinux
           - /buildfiles/selinux
           - echo $(getenforce)
+    outputs:
+      - Name: JobStatus
+        Selector: $.Status
+        Type: String
+
   - name: cleanAndCreateBranch
     action: "aws:branch"
     inputs:
       Choices:
         - NextStep: stopInstance
-          Variable: "{{cleanAndCreate}}"
-          BooleanEquals: true
+          Variable: "{{runSELinuxScript.JobStatus}}"
+          StringEquals: Success
       Default: terminateInstance
+
   - name: stopInstance
     action: "aws:changeInstanceState"
     timeoutSeconds: 1200
@@ -106,6 +119,7 @@ mainSteps:
       InstanceIds:
         - "{{ startInstances.InstanceIds }}"
       DesiredState: stopped
+
   # - name: CreateImage
   #   action: "aws:createImage"
   #   maxAttempts: 3
@@ -115,16 +129,32 @@ mainSteps:
   #     ImageName: "{{imageName}}"
   #     ImageDescription: "{{imageDescription}}"
   #   onFailure: "step:FailureHandling"
+
   # - name: CreateImageTags
   #   action: "aws:createTags"
   #   maxAttempts: 3
-  #   nextStep: terminateInstance
+  #   nextStep: ScanAMI_v2
   #   onFailure: "step:FailureHandling"
   #   inputs:
   #     ResourceType: EC2
   #     ResourceIds:
   #       - "{{CreateImage.ImageId}}"
   #     Tags: "{{imageTags}}"
+
+  # - name: ScanAMI_v2
+  #   action: "aws:executeAwsApi"
+  #   nextStep: terminateInstance
+  #   onFailure: "step:FailureHandling"
+  #   inputs:
+  #     Service: sns
+  #     Api: Publish
+  #     TopicArn: "{{scanFactorySNS}}"
+  #     Message: "{'ImageId':'{{createImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
+  #   outputs:
+  #     - Name: MessageId
+  #       Selector: $.MessageId
+  #       Type: String
+
   - name: terminateInstance
     action: "aws:changeInstanceState"
     timeoutSeconds: 1200
@@ -135,7 +165,8 @@ mainSteps:
       InstanceIds:
         - "{{ startInstances.InstanceIds }}"
       DesiredState: terminated
-  - name: endBuild
+
+  - name: endCleanAndCreateBranch
     action: "aws:sleep"
     maxAttempts: 3
     isCritical: false
@@ -143,6 +174,7 @@ mainSteps:
     onFailure: Continue
     inputs:
       Duration: PT5S
+
   - name: FailureHandling
     action: "aws:branch"
     inputs:
@@ -150,6 +182,7 @@ mainSteps:
         - NextStep: TerminateInstanceOnFailure
           Variable: "{{terminateInstanceOnFailure}}"
           BooleanEquals: true
+
   - name: TerminateInstanceOnFailure
     action: "aws:changeInstanceState"
     maxAttempts: 3
@@ -160,6 +193,7 @@ mainSteps:
       InstanceIds:
         - "{{startInstances.InstanceIds}}"
       DesiredState: terminated
+
   - name: EndFailureHandlingBranch
     action: "aws:sleep"
     maxAttempts: 3
