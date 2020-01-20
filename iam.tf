@@ -33,6 +33,7 @@ data "aws_iam_policy_document" "ssm_build_instance_role_policy_doc" {
     sid    = "1"
     effect = "Allow"
     actions = [
+      "logs:CreateLogGroup",
       "logs:CreateLogStream",
       "logs:DescribeLogGroups",
       "logs:DescribeLogStreams",

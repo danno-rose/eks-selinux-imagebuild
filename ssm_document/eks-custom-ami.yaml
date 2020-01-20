@@ -34,10 +34,6 @@ parameters:
     type: Boolean
     description: (Optional) Terminate the instance when build failed
     default: true
-  ssmCloudWatchLogGroup:
-    type: Boolean
-    description: (Optional) Terminate the instance when build failed
-    default: ${ssm_cloudwatch_logroup} #TODO: Add to relevent document steps
   cleanAndCreate:
     type: Boolean
     description: (Optional) Clean up and create AMI on success
@@ -65,6 +61,8 @@ mainSteps:
     onFailure: "step:FailureHandling"
     inputs:
       DocumentName: AWS-RunShellScript
+      CloudWatchOutputConfig:
+        CloudWatchOutputEnabled: true
       # OutputS3BucketName:
       #   Ref: GoldenAMIConfigBucket
       InstanceIds:
@@ -80,6 +78,8 @@ mainSteps:
     nextStep: "cleanAndCreateBranch"
     inputs:
       DocumentName: AWS-RunShellScript
+      CloudWatchOutputConfig:
+        CloudWatchOutputEnabled: true
       # OutputS3BucketName:
       #   Ref: GoldenAMIConfigBucket
       InstanceIds:
