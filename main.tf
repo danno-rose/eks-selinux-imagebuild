@@ -92,7 +92,7 @@ resource "aws_lambda_function" "test_lambda" {
 
   environment {
     variables = {
-      ssm_doc = aws_ssm_document.eks_selinux
+      ssm_doc = aws_ssm_document.eks_selinux.arn
     }
   }
 }
