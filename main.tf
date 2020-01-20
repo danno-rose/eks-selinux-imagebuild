@@ -83,7 +83,7 @@ resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
   filename         = "${path.module}/lambda/ssm_execute/ssm_execute.zip"
   function_name    = "ssm-eks-trigger-automation"
   role             = aws_iam_role.execute_ssm_lambda_role.arn
-  handler          = "exports.test"
+  handler          = "index.lambda_handler"
   source_code_hash = data.archive_file.ssm_execute_lambda.output_base64sha256
   runtime          = "python3.8"
 
