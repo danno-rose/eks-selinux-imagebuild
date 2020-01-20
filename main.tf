@@ -2,6 +2,17 @@ provider "aws" {
   region = var.aws_region
 }
 
+terraform {
+  backend "remote" {
+    hostname     = "app.terraform.io"
+    organization = "cloudorg-1"
+
+    workspaces {
+      name = "eks-selinux-imagebuild"
+    }
+  }
+}
+
 ### ============================================= ###
 ###  SSM Automation Document                      ###
 ### ============================================= ###
@@ -77,7 +88,7 @@ resource "aws_lambda_function" "test_lambda" {
   # For Terraform 0.11.11 and earlier, use the base64sha256() function and the file() function:
   # source_code_hash = "${base64sha256(file("lambda_function_payload.zip"))}"
   # source_code_hash = "${filebase64sha256("lambda_function_payload.zip")}"
-  runtime = "python3"
+  runtime = "python3.8"
 
   environment {
     variables = {
