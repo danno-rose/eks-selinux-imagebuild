@@ -6,19 +6,19 @@ resource "aws_iam_role" "ssm_build_instance_role" {
   name = "ssm-eks-selinux-instance-role"
 
   assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
     {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Action": "sts:AssumeRole",
-          "Principal": {
-            "Service": "ec2.amazonaws.com"
-          },
-          "Effect": "Allow",
-          "Sid": ""
-        }
-      ]
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
     }
+  ]
+}
 EOF
 }
 # Role Policy
@@ -118,20 +118,20 @@ resource "aws_iam_role" "ssm_build_automation_role" {
   name = "ssm-eks-selinux-automation-role"
 
   assume_role_policy = <<EOF
- {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": [
-          "ec2.amazonaws.com",
-          "ssm.amazonaws.com"
-        ]
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
+{
+"Version": "2012-10-17",
+"Statement": [
+  {
+    "Effect": "Allow",
+    "Principal": {
+      "Service": [
+        "ec2.amazonaws.com",
+        "ssm.amazonaws.com"
+      ]
+    },
+    "Action": "sts:AssumeRole"
+  }
+]
 }
 EOF
 }
