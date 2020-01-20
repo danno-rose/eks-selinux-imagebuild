@@ -63,8 +63,6 @@ mainSteps:
       DocumentName: AWS-RunShellScript
       CloudWatchOutputConfig:
         CloudWatchOutputEnabled: true
-      # OutputS3BucketName:
-      #   Ref: GoldenAMIConfigBucket
       InstanceIds:
         - "{{startInstances.InstanceIds}}"
       Parameters:
@@ -80,13 +78,11 @@ mainSteps:
       DocumentName: AWS-RunShellScript
       CloudWatchOutputConfig:
         CloudWatchOutputEnabled: true
-      # OutputS3BucketName:
-      #   Ref: GoldenAMIConfigBucket
       InstanceIds:
         - "{{startInstances.InstanceIds}}"
       Parameters:
         commands:
-          - mkdir /buildfiles
+          - sudo mkdir /buildfiles
           - git clone {{ buildFilesRepo }} /buildfiles
           - ls -lah /buildfiles
           - chmod +x /buildfiles/selinux
