@@ -34,7 +34,7 @@ resource "aws_ssm_document" "eks_selinux" {
     source_ami_id         = var.ssm_source_ami_id
     subnet_id             = var.ssm_instance_subnet_id
     securitygroup_id      = var.ssm_instance_securitygroup_id
-    instance_profile_name = aws_iam_instance_profile.ssm_build_instance_profile.arn
+    instance_profile_name = aws_iam_instance_profile.ssm_build_instance_profile.name
     #instance_profile_name = var.ssm_instance_profile_name
     buildfiles_repo = var.ssm_instance_buildfiles_repo
     #    scripts_path          = split(".", split("/", var.ssm_instance_buildfiles_repo)[4])[0]
@@ -85,11 +85,11 @@ resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
   role             = aws_iam_role.execute_ssm_lambda_role.arn
   handler          = "index.lambda_handler"
   source_code_hash = data.archive_file.ssm_execute_lambda.output_base64sha256
-  runtime          = "python3.8"
+  runtime          = "python3.6"
 
   environment {
     variables = {
-      ssm_doc = aws_ssm_document.eks_selinux.arn
+      ssm_doc = aws_ssm_document.eks_selinux.name
     }
   }
 }
