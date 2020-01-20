@@ -160,7 +160,7 @@ mainSteps:
     timeoutSeconds: 1200
     maxAttempts: 1
     onFailure: Continue
-    nextStep: endBuild
+    nextStep: endCleanAndCreateBranch
     inputs:
       InstanceIds:
         - "{{ startInstances.InstanceIds }}"
