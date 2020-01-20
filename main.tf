@@ -84,7 +84,7 @@ resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
   function_name    = "lambda_function_name"
   role             = aws_iam_role.execute_ssm_lambda_role.arn
   handler          = "exports.test"
-  source_code_hash = "${filebase64sha256(archive_file.ssm_execute_lambda.output_path)}"
+  source_code_hash = data.archive_file.ssm_execute_lambda.output_base64sha256
   runtime          = "python3.8"
 
   environment {
