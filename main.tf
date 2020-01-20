@@ -64,9 +64,9 @@ resource "aws_cloudwatch_event_rule" "ssm_build_schedule" {
 resource "aws_lambda_permission" "ssm_allow_cloudwatch_trigger" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.ssm_automation_trigger_lambda.function_name}"
+  function_name = aws_lambda_function.ssm_automation_trigger_lambda.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = "arn:aws:events:eu-west-1:111122223333:rule/RunDaily"
+  source_arn    = aws_cloudwatch_event_rule.ssm_build_schedule.arn
 }
 
 ### ============================================= ###
@@ -84,7 +84,7 @@ resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
   function_name    = "lambda_function_name"
   role             = aws_iam_role.execute_ssm_lambda_role.arn
   handler          = "exports.test"
-  source_code_hash = "${filebase64sha256("${path.module}/lambda/ssm_execute/ssm_execute.zip")}"
+  source_code_hash = "${filebase64sha256(archive_file.ssm_execute_lambda.output_path)}"
   runtime          = "python3.8"
 
   environment {
