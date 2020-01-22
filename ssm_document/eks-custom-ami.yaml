@@ -34,16 +34,28 @@ parameters:
     type: Boolean
     description: (Optional) Terminate the instance when build failed
     default: true
-  cleanAndCreate:
+  testingBranch:
     type: Boolean
     description: (Optional) Clean up and create AMI on success
-    default: true
+    default: false
   scanFactorySNS:
     type: String
     description: sns topic for scan factory
     default: arn:aws:sns:eu-west-1:752991339866:scanFactory #arn:aws:sns:eu-west-1:618840856400:scan_factory_ami_submissions_v2
+  NotificationSNS:
+    type: String
+    description: sns topic for scan factory
+    default: scan_factory_ami_submissions_v2 #arn:aws:sns:eu-west-1:618840856400:scan_factory_ami_submissions_v2
 
 mainSteps:
+  - name: testingBranch
+    action: "aws:branch"
+    inputs:
+      Choices:
+        - NextStep: ScanAMI_v2
+          Variable: "{{testingBranch}}"
+          BooleanEquals: true
+
   - name: startInstances
     action: "aws:runInstances"
     timeoutSeconds: 3600
@@ -100,6 +112,27 @@ mainSteps:
         Selector: $.Status
         Type: String
 
+  # - name: runCISLevel1Script
+  #   action: "aws:runCommand"
+  #   maxAttempts: 3
+  #   timeoutSeconds: 3600
+  #   onFailure: "step:FailureHandling"
+  #   nextStep: "cleanAndCreateBranch"
+  #   inputs:
+  #     DocumentName: AWS-RunShellScript
+  #     CloudWatchOutputConfig:
+  #       CloudWatchOutputEnabled: true
+  #     InstanceIds:
+  #       - "{{startInstances.InstanceIds}}"
+  #     Parameters:
+  #       commands:
+  #         - chmod +x /buildfiles/cisLevel1
+  #         - /buildfiles/cisLevel1
+  #   outputs:
+  #     - Name: JobStatus
+  #       Selector: $.Status
+  #       Type: String
+
   - name: cleanAndCreateBranch
     action: "aws:branch"
     inputs:
@@ -120,53 +153,60 @@ mainSteps:
         - "{{ startInstances.InstanceIds }}"
       DesiredState: stopped
 
-  # - name: CreateImage
-  #   action: "aws:createImage"
-  #   maxAttempts: 3
-  #   nextStep: CreateImageTags
-  #   inputs:
-  #     InstanceId: "{{startInstances.InstanceIds}}"
-  #     ImageName: "{{imageName}}"
-  #     ImageDescription: "{{imageDescription}}"
-  #   onFailure: "step:FailureHandling"
+  - name: CreateImage
+    action: "aws:createImage"
+    maxAttempts: 3
+    nextStep: CreateImageTags
+    onFailure: "step:FailureHandling"
+    inputs:
+      InstanceId: "{{startInstances.InstanceIds}}"
+      ImageName: "Amazon-Linux-2-EKS-Optimized-SELinux-Enabled" #TODO:Create a proper name include version of EKS
+      ImageDescription: "HSBC Build of Amazon Linux 2 EKS Optimized with SELinux Enabled."
 
-  # - name: CreateImageTags
-  #   action: "aws:createTags"
-  #   maxAttempts: 3
-  #   nextStep: ScanAMI_v2
-  #   onFailure: "step:FailureHandling"
-  #   inputs:
-  #     ResourceType: EC2
-  #     ResourceIds:
-  #       - "{{CreateImage.ImageId}}"
-  #     Tags: "{{imageTags}}"
-
-  # - name: ScanAMI_v2
-  #   action: "aws:executeAwsApi"
-  #   nextStep: terminateInstance
-  #   onFailure: "step:FailureHandling"
-  #   inputs:
-  #     Service: sns
-  #     Api: Publish
-  #     TopicArn: "{{scanFactorySNS}}"
-  #     Message: "{'ImageId':'{{createImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
-  #   outputs:
-  #     - Name: MessageId
-  #       Selector: $.MessageId
-  #       Type: String
+  - name: CreateImageTags
+    action: "aws:createTags"
+    maxAttempts: 3
+    nextStep: ScanAMI_v2
+    onFailure: "step:FailureHandling"
+    inputs:
+      ResourceType: EC2
+      ResourceIds:
+        - "{{CreateImage.ImageId}}"
+      Tags:
+        - Key: "Name"
+          Value: "{{CreateImage.ImageId}}-EKS-Optimzed-SELinux-CISLevel1/v1"
+        - Key: "Owner"
+          Value: "GCS"
+        - Key: Version
+          Value: "{{VersionIncrementValue}}" #TODO:State to be written to DynamoDB
 
   - name: terminateInstance
     action: "aws:changeInstanceState"
     timeoutSeconds: 1200
     maxAttempts: 1
     onFailure: Continue
-    nextStep: endCleanAndCreateBranch
+    nextStep: ScanAMI_v2
     inputs:
       InstanceIds:
         - "{{ startInstances.InstanceIds }}"
       DesiredState: terminated
 
-  - name: endCleanAndCreateBranch
+  - name: ScanAMI_v2
+    action: "aws:executeAwsApi"
+    nextStep: endBuild
+    onFailure: "step:FailureHandling"
+    inputs:
+      Service: sns
+      Api: Publish
+      TopicArn: "{{scanFactorySNS}}"
+      #TODO: Message: "{'ImageId':'{{createImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
+      Message: "{'ImageId':'my-testImage','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
+    outputs:
+      - Name: MessageId
+        Selector: $.MessageId
+        Type: String
+
+  - name: endBuild
     action: "aws:sleep"
     maxAttempts: 3
     isCritical: false

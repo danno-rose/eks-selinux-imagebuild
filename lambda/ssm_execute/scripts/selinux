@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ## update system and install seLinux tools
-sudo yum update -y
+# sudo yum update -y // no longer needed
 sudo yum install -y policycoreutils-python selinux-policy-devel jq
 
 # ## Install the SELinux Tools -- install RPMS without dependancies, in order to get around cyclic dependancies
