@@ -41,7 +41,7 @@ parameters:
   scanFactorySNS:
     type: String
     description: sns topic for scan factory
-    default: arn:aws:sns:eu-west-1:618840856400:scan_factory_ami_submissions_v2
+    default: arn:aws:sns:eu-west-1:752991339866:scanFactory #arn:aws:sns:eu-west-1:618840856400:scan_factory_ami_submissions_v2
 
 mainSteps:
   - name: startInstances

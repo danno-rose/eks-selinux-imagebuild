@@ -201,6 +201,7 @@ data "aws_iam_policy_document" "ssm_build_automation_role_policy_doc" {
     ]
     resources = [
       "arn:aws:sns:*:*:Automation*",
+      "arn:aws:sns:*:*:scanFactory*",
     ]
   }
 
