@@ -46,7 +46,10 @@ parameters:
     type: String
     description: sns topic for scan factory
     default: scan_factory_ami_submissions_v2 #arn:aws:sns:eu-west-1:618840856400:scan_factory_ami_submissions_v2
-
+    VersionIncrementValue:
+      type: String
+      description: VersionIncrementValue
+      default: 1
 mainSteps:
   - name: testingBranch
     action: "aws:branch"
