@@ -104,8 +104,8 @@ mainSteps:
           - sudo mkdir /buildfiles
           - git clone {{ buildFilesRepo }} /buildfiles
           - ls -lah /buildfiles
-          - chmod +x /buildfiles/selinux
-          - /buildfiles/selinux
+          - chmod +x /buildfiles/scripts/selinux
+          - /buildfiles/scripts/selinux
           - echo $(getenforce)
     outputs:
       - Name: JobStatus
