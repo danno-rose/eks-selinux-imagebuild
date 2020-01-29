@@ -13,9 +13,8 @@ terraform {
   }
 }
 
-#TODO: Create DynamoDB Table
+
 #TODO: AddPermissions to read and write to table from execute lambda
-#TODO: Add store and compare ami to execute lambda function
 
 
 
@@ -97,26 +96,22 @@ resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
 ### ============================================= ###
 ### DynamoDB                                      ###
 ### ============================================= ###
-# resource "aws_dynamodb_table" "basic-dynamodb-table" {
-#   name           = "ssm-eks-selinux-build"
-#   billing_mode   = "PROVISIONED"
-#   read_capacity  = 1
-#   write_capacity = 1
-#   hash_key       = "amiId"
-#   range_key      = "GameTitle"
+resource "aws_dynamodb_table" "ssm_eks_selinux_table" {
+  name           = "ssm-eks-selinux-build"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 1
+  write_capacity = 1
+  hash_key       = "imageID"
+  range_key      = "dateCreated"
 
-#   attribute {
-#     name = "amiId"
-#     type = "S"
-#   }
+  attribute {
+    name = "imageID"
+    type = "S"
+  }
 
-#   attribute {
-#     name = "GameTitle"
-#     type = "S"
-#   }
+  attribute {
+    name = "dateCreated"
+    type = "N"
+  }
 
-#   attribute {
-#     name = "TopScore"
-#     type = "N"
-#   }
-# }
+}

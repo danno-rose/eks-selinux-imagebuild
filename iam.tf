@@ -265,6 +265,18 @@ data "aws_iam_policy_document" "execute_ssm_lambda_role_policy_doc" {
       "*",
     ]
   }
+  statement {
+    sid    = "1"
+    effect = "Allow"
+    actions = [
+      "dynamodb:readtable",
+      "dynamodb:writetable" #TODO: Get the correct dynamodB permissions set
+    ]
+
+    resources = [
+      aws_dynamodb_table.ssm_eks_selinux_table.arn
+    ]
+  }
 }
 
 

@@ -1,13 +1,11 @@
 {
-    "HSBC": {
+    "imageID": "value",
+    "dateCreated": "value",
+    "sourceAMI": {
         "imageID": "value",
         "dateCreated": "value",
-        "sourceAMI": {
-            "imageID": "value",
-            "dateCreated": "value",
-            "kubeVersion": "value"
-        },
-        "kubeVersion": "value",
-        "hsbcVersion": "value"
-    }
+        "kubeVersion": "value"
+    },
+    "kubeVersion": "value",
+    "hsbcVersion": "value"
 }
