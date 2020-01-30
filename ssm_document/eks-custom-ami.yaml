@@ -50,6 +50,14 @@ parameters:
     type: Integer
     description: VersionIncrementValue
     default: 1
+  ScriptsBucket:
+    type: String
+    description: path of the scripts bucket
+    default: ${artifacts_bucket}
+  CloudWatchLogGroupName:
+    type: String
+    description: Cloudwatch log group logging run command
+    default: ${ssm_cloudwatch_loggroup}
 mainSteps:
   - name: testingBranch
     action: "aws:branch"
@@ -84,11 +92,30 @@ mainSteps:
       DocumentName: AWS-RunShellScript
       CloudWatchOutputConfig:
         CloudWatchOutputEnabled: true
+        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
       InstanceIds:
         - "{{startInstances.InstanceIds}}"
       Parameters:
         commands:
-          - yum install -y git
+          - yum install -y aws-cli
+
+  - name: downloadS3Files
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 300
+    onFailure: "step:FailureHandling"
+    inputs:
+      DocumentName: AWS-RunShellScript
+      CloudWatchOutputConfig:
+        CloudWatchOutputEnabled: true
+        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      Parameters:
+        commands:
+          - sudo mkdir /buildfiles
+          - aws s3 cp s3://{{ScriptsBucket}}/scripts/selinux /buildfiles/selinx
+          - aws s3 cp s3://{{ScriptsBucket}}/scripts/cis-level1 /buildfiles/cis-level1
 
   - name: runSELinuxScript
     action: "aws:runCommand"
@@ -100,16 +127,13 @@ mainSteps:
       DocumentName: AWS-RunShellScript
       CloudWatchOutputConfig:
         CloudWatchOutputEnabled: true
+        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
       InstanceIds:
         - "{{startInstances.InstanceIds}}"
       Parameters:
         commands:
-          - sudo mkdir /buildfiles
-          - git clone {{ buildFilesRepo }} /buildfiles
-          - ls -lah /buildfiles
-          - chmod +x /buildfiles/scripts/selinux
-          - /buildfiles/scripts/selinux
-          - echo $(getenforce)
+          - chmod +x /buildfiles/selinux
+          - /buildfiles/selinux
     outputs:
       - Name: JobStatus
         Selector: $.Status
@@ -125,6 +149,7 @@ mainSteps:
   #     DocumentName: AWS-RunShellScript
   #     CloudWatchOutputConfig:
   #       CloudWatchOutputEnabled: true
+  #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
   #     InstanceIds:
   #       - "{{startInstances.InstanceIds}}"
   #     Parameters:
@@ -140,17 +165,34 @@ mainSteps:
     action: "aws:branch"
     inputs:
       Choices:
-        - NextStep: stopInstance
+        - NextStep: removePreReqs
           Variable: "{{runSELinuxScript.JobStatus}}"
           StringEquals: Success
       Default: terminateInstance
+
+  - name: removePreReqs
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 300
+    onFailure: "step:FailureHandling"
+    nextStep: stopInstance
+    inputs:
+      DocumentName: AWS-RunShellScript
+      CloudWatchOutputConfig:
+        CloudWatchOutputEnabled: true
+        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      Parameters:
+        commands:
+          - yum remove aws-cli
 
   - name: stopInstance
     action: "aws:changeInstanceState"
     timeoutSeconds: 1200
     maxAttempts: 1
     onFailure: "step:FailureHandling"
-    #  nextStep: "CreateImage"
+    nextStep: CreateImage
     inputs:
       InstanceIds:
         - "{{ startInstances.InstanceIds }}"

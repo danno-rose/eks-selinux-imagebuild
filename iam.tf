@@ -254,7 +254,6 @@ resource "aws_iam_policy" "execute_ssm_lambda_role_policy" {
 # policy definition
 data "aws_iam_policy_document" "execute_ssm_lambda_role_policy_doc" {
   statement {
-    sid    = "1"
     effect = "Allow"
     actions = [
       "ssm:StartAutomationExecution",

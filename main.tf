@@ -15,7 +15,7 @@ terraform {
 
 
 #TODO: AddPermissions to read and write to table from execute lambda
-
+#TODO: Create cloudwatch log group
 
 
 ### ============================================= ###
@@ -35,9 +35,9 @@ resource "aws_ssm_document" "eks_selinux" {
     securitygroup_id      = var.ssm_instance_securitygroup_id
     instance_profile_name = aws_iam_instance_profile.ssm_build_instance_profile.name
     #instance_profile_name = var.ssm_instance_profile_name
-    buildfiles_repo = var.ssm_instance_buildfiles_repo
-    #    scripts_path          = split(".", split("/", var.ssm_instance_buildfiles_repo)[4])[0]
-    # ssm_cloudwatch_logroup = aws_cloudwatch_log_group.ssm_eks_imagebuild.id
+    buildfiles_repo         = var.ssm_instance_buildfiles_repo
+    artifacts_bucket        = aws_s3_bucket.eks_ami_artifacts_bucket.id
+    ssm_cloudwatch_loggroup = aws_cloudwatch_log_group.ssm_eks_imagebuild.id
     }
   )
 }
@@ -45,9 +45,9 @@ resource "aws_ssm_document" "eks_selinux" {
 ### ============================================= ###
 ### Cloudwatch logs and trigger for SSM           ###
 ### ============================================= ###
-# resource "aws_cloudwatch_log_group" "ssm_eks_imagebuild" {
-#   name = "ssm-eks-optimized-image-build"
-# }
+resource "aws_cloudwatch_log_group" "ssm_eks_imagebuild" {
+  name = "ssm-eks-optimized-image-build"
+}
 
 resource "aws_cloudwatch_event_target" "ssm_pipeline_lambda_trigger" {
   rule = aws_cloudwatch_event_rule.ssm_build_schedule.name
@@ -102,7 +102,7 @@ resource "aws_dynamodb_table" "ssm_eks_selinux_table" {
   read_capacity  = 1
   write_capacity = 1
   hash_key       = "imageID"
-  range_key      = "dateCreated"
+  range_key      = "hsbcVersion"
 
   attribute {
     name = "imageID"
@@ -110,8 +110,97 @@ resource "aws_dynamodb_table" "ssm_eks_selinux_table" {
   }
 
   attribute {
-    name = "dateCreated"
+    name = "hsbcVersion"
     type = "N"
   }
 
 }
+### ============================================= ###
+### S3 Bucket for Scripts                         ###
+### ============================================= ###
+resource "random_id" "bucket_hex" {
+
+  byte_length = 8
+}
+
+resource "aws_s3_bucket" "eks_ami_artifacts_bucket" {
+  bucket        = "eks-ami-artifacts-bucket-${random_id.bucket_hex.hex}"
+  acl           = "private"
+  force_destroy = true
+  versioning {
+    enabled = true
+  }
+
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
+}
+
+#### uploading files to the bucket
+resource "aws_s3_bucket_object" "upload_selinux_script" {
+  key                    = "scripts/selinux"
+  bucket                 = aws_s3_bucket.eks_ami_artifacts_bucket.id
+  source                 = "${path.module}/scripts/selinux"
+  server_side_encryption = "AES256"
+  #etag                   = filemd5("${path.module}/scripts/selinux}")
+}
+
+resource "aws_s3_bucket_object" "upload_cis1_script" {
+  key                    = "scripts/cis-level1"
+  bucket                 = aws_s3_bucket.eks_ami_artifacts_bucket.id
+  source                 = "${path.module}/scripts/cis-level1"
+  server_side_encryption = "AES256"
+  #etag                   = filemd5("${path.module}/scripts/cis-level1}")
+}
+
+
+
+resource "aws_s3_bucket_policy" "policy_eks_ami_artifacts_bucket" {
+  bucket = aws_s3_bucket.eks_ami_artifacts_bucket.id
+
+  policy = data.aws_iam_policy_document.policy_definition_eks_ami_artifacts_bucket.json
+}
+
+data "aws_iam_policy_document" "policy_definition_eks_ami_artifacts_bucket" {
+  statement {
+    principals {
+      type        = "AWS"
+      identifiers = [var.eks_ami_artifacts_bucket_admin]
+    }
+
+    actions = [
+      "s3:*",
+    ]
+
+    resources = [
+      "${aws_s3_bucket.eks_ami_artifacts_bucket.arn}",
+      "${aws_s3_bucket.eks_ami_artifacts_bucket.arn}/*"
+    ]
+  }
+
+  statement {
+    principals {
+      type = "AWS"
+      identifiers = [
+        aws_iam_role.ssm_build_automation_role.arn,
+        aws_iam_role.ssm_build_instance_role.arn
+      ]
+    }
+
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+    ]
+
+    resources = [
+      "${aws_s3_bucket.eks_ami_artifacts_bucket.arn}",
+      "${aws_s3_bucket.eks_ami_artifacts_bucket.arn}/*"
+    ]
+  }
+}
+
+

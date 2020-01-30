@@ -30,3 +30,7 @@ variable "ssm_automation_role" {
 variable "ssm_instance_buildfiles_repo" {
   default = "default"
 }
+
+variable "eks_ami_artifacts_bucket_admin" {
+  default = "some_arn"
+}

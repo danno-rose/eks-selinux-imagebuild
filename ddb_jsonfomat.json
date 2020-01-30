@@ -1,4 +1,70 @@
 {
+    "imageID": "ami-000000000001",
+    "dateCreated": "datetime.datetime(2019, 12, 20, 1, 51, 56, 625000, tzinfo=tzlocal())",
+    "sourceAMI": {
+        "imageID": "ami-0b9d2c11b47bd8264",
+        "dateCreated": "datetime.datetime(2019, 12, 17, 1, 51, 56, 625000, tzinfo=tzlocal())",
+        "kubeVersion": "1.14"
+    },
+    "kubeVersion": "1.14",
+    "hsbcVersion": "1"
+} {
+    "imageID": "ami-000000000002",
+    "dateCreated": "datetime.datetime(2019, 12, 30, 1, 51, 56, 625000, tzinfo=tzlocal())",
+    "sourceAMI": {
+        "imageID": "ami-0b9d2c11b47bd8264",
+        "dateCreated": "datetime.datetime(2019, 12, 17, 1, 51, 56, 625000, tzinfo=tzlocal())",
+        "kubeVersion": "1.14"
+    },
+    "kubeVersion": "1.14",
+    "hsbcVersion": "2"
+}
+
+{
+    "imageID": "ami-000000000003",
+    "dateCreated": "datetime.datetime(2019, 12, 30, 1, 51, 56, 625000, tzinfo=tzlocal())",
+    "sourceAMI": {
+        "imageID": "ami-0b9d2c11b47bd8264",
+        "dateCreated": "datetime.datetime(2019, 12, 17, 1, 51, 56, 625000, tzinfo=tzlocal())",
+        "kubeVersion": "1.14"
+    },
+    "kubeVersion": "1.14",
+    "hsbcVersion": 3
+
+
+}
+
+{
+    "imageID": "value",
+    "dateCreated": "value",
+    "sourceAMI": {
+        "imageID": "value",
+        "dateCreated": "value",
+        "kubeVersion": "value"
+    },
+    "kubeVersion": "value",
+    "hsbcVersion": "value"
+} {
+    "imageID": "value",
+    "dateCreated": "value",
+    "sourceAMI": {
+        "imageID": "value",
+        "dateCreated": "value",
+        "kubeVersion": "value"
+    },
+    "kubeVersion": "value",
+    "hsbcVersion": "value"
+} {
+    "imageID": "value",
+    "dateCreated": "value",
+    "sourceAMI": {
+        "imageID": "value",
+        "dateCreated": "value",
+        "kubeVersion": "value"
+    },
+    "kubeVersion": "value",
+    "hsbcVersion": "value"
+} {
     "imageID": "value",
     "dateCreated": "value",
     "sourceAMI": {
