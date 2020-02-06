@@ -59,13 +59,13 @@ parameters:
     description: Cloudwatch log group logging run command
     default: ${ssm_cloudwatch_loggroup}
 mainSteps:
-  - name: testingBranch
-    action: "aws:branch"
-    inputs:
-      Choices:
-        - NextStep: ScanAMI_v2
-          Variable: "{{testingBranch}}"
-          BooleanEquals: true
+  # - name: testingBranch
+  #   action: "aws:branch"
+  #   inputs:
+  #     Choices:
+  #       - NextStep: ScanAMI_v2
+  #         Variable: "{{testingBranch}}"
+  #         BooleanEquals: true
 
   - name: startInstances
     action: "aws:runInstances"
@@ -202,7 +202,7 @@ mainSteps:
   - name: CreateImage
     action: "aws:createImage"
     maxAttempts: 3
-    nextStep: CreateImageTags
+    nextStep: terminateInstance
     onFailure: "step:FailureHandling"
     inputs:
       InstanceId: "{{startInstances.InstanceIds}}"

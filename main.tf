@@ -26,7 +26,7 @@ resource "aws_ssm_document" "eks_selinux" {
   name            = "eks_ami_selinux"
   document_type   = "Automation"
   document_format = "YAML"
-  content = templatefile("${path.module}/ssm_document/eks-custom-ami.yaml", {
+  content = templatefile("${path.module}/ssm_document/eks-custom-ami-selinux.yaml", {
     automation_role = aws_iam_role.ssm_build_automation_role.arn
     #automation_role  = var.ssm_automation_role
     instance_size         = var.ssm_instance_size
@@ -101,19 +101,25 @@ resource "aws_lambda_permission" "ssm_allow_cloudwatch_trigger" {
 # }
 
 resource "null_resource" "ssm_lambda_zip_files" {
+  triggers = {
+    lambdamd5 = filemd5("${path.module}/lambda/ssm_execute/index.py")
+  }
   provisioner "local-exec" {
-    command = "zip -gD ${path.module}/lambda/ssm_execute/function.zip ${path.module}/lambda/ssm_execute/index.py"
+    command = <<EOT
+  cd ${path.module}/lambda/ssm_execute 
+  zip -r -f function.zip .
+  EOT
   }
 }
 
 
 resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
-  filename      = "${path.module}/lambda/ssm_execute/function.zip"
-  function_name = "ssm-eks-trigger-automation"
-  role          = aws_iam_role.execute_ssm_lambda_role.arn
-  handler       = "index.lambda_handler"
-  #source_code_hash = data.archive_file.ssm_execute_lambda.output_base64sha256
-  runtime = "python3.6"
+  filename         = "${path.module}/lambda/ssm_execute/function.zip"
+  function_name    = "ssm-eks-trigger-automation"
+  role             = aws_iam_role.execute_ssm_lambda_role.arn
+  handler          = "index.lambda_handler"
+  source_code_hash = filebase64sha256("${path.module}/lambda/ssm_execute/function.zip")
+  runtime          = "python3.6"
 
   environment {
     variables = {
