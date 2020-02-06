@@ -1,5 +1,6 @@
 *.tfstate*
 *.terraform
-*.zip
+*ssm_execute.zip
 *.vscode
 .venv*
+*.TMP

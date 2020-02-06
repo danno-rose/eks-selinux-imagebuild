@@ -42,6 +42,27 @@ resource "aws_ssm_document" "eks_selinux" {
   )
 }
 
+
+# resource "aws_ssm_document" "eks_selinux" {
+#   name            = "eks_ami_selinux"
+#   document_type   = "Automation"
+#   document_format = "YAML"
+#   content = templatefile("${path.module}/ssm_document/eks-custom-ami.yaml", {
+#     automation_role = aws_iam_role.ssm_build_automation_role.arn
+#     #automation_role  = var.ssm_automation_role
+#     instance_size         = var.ssm_instance_size
+#     source_ami_id         = var.ssm_source_ami_id
+#     subnet_id             = var.ssm_instance_subnet_id
+#     securitygroup_id      = var.ssm_instance_securitygroup_id
+#     instance_profile_name = aws_iam_instance_profile.ssm_build_instance_profile.name
+#     #instance_profile_name = var.ssm_instance_profile_name
+#     buildfiles_repo         = var.ssm_instance_buildfiles_repo
+#     artifacts_bucket        = aws_s3_bucket.eks_ami_artifacts_bucket.id
+#     ssm_cloudwatch_loggroup = aws_cloudwatch_log_group.ssm_eks_imagebuild.id
+#     }
+#   )
+# }
+
 ### ============================================= ###
 ### Cloudwatch logs and trigger for SSM           ###
 ### ============================================= ###
@@ -72,19 +93,27 @@ resource "aws_lambda_permission" "ssm_allow_cloudwatch_trigger" {
 ### Lambda to trigger                             ###
 ### ============================================= ###
 
-data "archive_file" "ssm_execute_lambda" {
-  type        = "zip"
-  output_path = "${path.module}/lambda/ssm_execute/ssm_execute.zip"
-  source_file = "${path.module}/lambda/ssm_execute/index.py"
+# data "archive_file" "ssm_execute_lambda" {
+#   type        = "zip"
+#   output_path = "${path.module}/lambda/ssm_execute/ssm_execute.zip"
+#   source_file = "${path.module}/lambda/ssm_execute/index.py"
+
+# }
+
+resource "null_resource" "ssm_lambda_zip_files" {
+  provisioner "local-exec" {
+    command = "zip -gD ${path.module}/lambda/ssm_execute/function.zip ${path.module}/lambda/ssm_execute/index.py"
+  }
 }
 
+
 resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
-  filename         = "${path.module}/lambda/ssm_execute/ssm_execute.zip"
-  function_name    = "ssm-eks-trigger-automation"
-  role             = aws_iam_role.execute_ssm_lambda_role.arn
-  handler          = "index.lambda_handler"
-  source_code_hash = data.archive_file.ssm_execute_lambda.output_base64sha256
-  runtime          = "python3.6"
+  filename      = "${path.module}/lambda/ssm_execute/function.zip"
+  function_name = "ssm-eks-trigger-automation"
+  role          = aws_iam_role.execute_ssm_lambda_role.arn
+  handler       = "index.lambda_handler"
+  #source_code_hash = data.archive_file.ssm_execute_lambda.output_base64sha256
+  runtime = "python3.6"
 
   environment {
     variables = {

@@ -2,3 +2,5 @@
 
 ## left blank
 echo "Installing all your cis standards"
+
+chmod 755 ...
