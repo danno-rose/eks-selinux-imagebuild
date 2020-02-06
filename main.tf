@@ -35,7 +35,6 @@ resource "aws_ssm_document" "eks_selinux" {
     securitygroup_id      = var.ssm_instance_securitygroup_id
     instance_profile_name = aws_iam_instance_profile.ssm_build_instance_profile.name
     #instance_profile_name = var.ssm_instance_profile_name
-    buildfiles_repo         = var.ssm_instance_buildfiles_repo
     artifacts_bucket        = aws_s3_bucket.eks_ami_artifacts_bucket.id
     ssm_cloudwatch_loggroup = aws_cloudwatch_log_group.ssm_eks_imagebuild.id
     }
@@ -100,17 +99,17 @@ resource "aws_lambda_permission" "ssm_allow_cloudwatch_trigger" {
 
 # }
 
-resource "null_resource" "ssm_lambda_zip_files" {
-  triggers = {
-    lambdamd5 = filemd5("${path.module}/lambda/ssm_execute/index.py")
-  }
-  provisioner "local-exec" {
-    command = <<EOT
-  cd ${path.module}/lambda/ssm_execute 
-  zip -r -f function.zip .
-  EOT
-  }
-}
+# resource "null_resource" "ssm_lambda_zip_files" {
+#   triggers = {
+#     lambdamd5 = filemd5("${path.module}/lambda/ssm_execute/index.py")
+#   }
+#   provisioner "local-exec" {
+#     command = <<EOT
+#   cd ${path.module}/lambda/ssm_execute 
+#   zip -r function.zip .
+#   EOT
+#   }
+# }
 
 
 resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
@@ -181,7 +180,7 @@ resource "aws_s3_bucket_object" "upload_selinux_script" {
   bucket                 = aws_s3_bucket.eks_ami_artifacts_bucket.id
   source                 = "${path.module}/scripts/selinux"
   server_side_encryption = "AES256"
-  #etag                   = filemd5("${path.module}/scripts/selinux}")
+  etag                   = filemd5("${path.module}/scripts/selinux")
 }
 
 resource "aws_s3_bucket_object" "upload_cis1_script" {
@@ -189,7 +188,7 @@ resource "aws_s3_bucket_object" "upload_cis1_script" {
   bucket                 = aws_s3_bucket.eks_ami_artifacts_bucket.id
   source                 = "${path.module}/scripts/cis-level1"
   server_side_encryption = "AES256"
-  #etag                   = filemd5("${path.module}/scripts/cis-level1}")
+  etag                   = filemd5("${path.module}/scripts/cis-level1")
 }
 
 

@@ -26,10 +26,6 @@ parameters:
     type: String
     description:
     default: ${instance_profile_name}
-  buildFilesRepo:
-    type: String
-    description:
-    default: ${buildfiles_repo}
   terminateInstanceOnFailure:
     type: Boolean
     description: (Optional) Terminate the instance when build failed
@@ -186,7 +182,7 @@ mainSteps:
         - "{{startInstances.InstanceIds}}"
       Parameters:
         commands:
-          - yum remove aws-cli
+          - yum remove -y aws-cli
 
   - name: stopInstance
     action: "aws:changeInstanceState"

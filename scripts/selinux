@@ -26,4 +26,4 @@ sudo mv /etc/docker/daemon.json /etc/docker/daemon.json_bak
 echo $VAL | jq '. += {"selinux-enabled":true}' | sudo tee -a /etc/docker/daemon.json
 
 # ## Restart system
-exit 194
+#exit 194

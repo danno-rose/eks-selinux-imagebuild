@@ -97,7 +97,7 @@ def start_ssm(ami_id,version_number):
         }
     )
 
-### Lambda Tigger
+### Lambda Tigger#
 def lambda_handler(event, context):
         
         for version in eks_ver:
