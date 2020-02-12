@@ -5,3 +5,5 @@ ssm_instance_securitygroup_id = "sg-aefe1bd9"
 # #ssm_source_ami_id             = "ami-03772b2e67db0c87b"
 ssm_instance_size              = "c5.large"
 eks_ami_artifacts_bucket_admin = "arn:aws:iam::752991339866:user/drose-ssh"
+eks_versions_to_support        = "1.14,1.13"
+time_delta                     = 21

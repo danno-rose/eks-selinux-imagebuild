@@ -21,14 +21,17 @@ from dynamodb_json import json_util as json
 
 
 
-eks_ver = ['1.14','1.13']
-db_table = 'ssm-eks-selinux-build'
-ssm_trigger_function = "ssm-eks-trigger-automation"
-temp_version = "1"
-today = datetime.now(timezone.utc)
+# eks_ver = ['1.14','1.13']
+# db_table = 'ssm-eks-selinux-build'
+# timedelta = 21
+# ssm_trigger_function = "ssm-eks-trigger-automation"
+# temp_version = "1"
+# today = datetime.now(timezone.utc)
 
-#SSMDocument = os.environ['ssm_doc']
-timedelta = 21
+SSMDocument = os.environ['ssm_doc']
+eks_ver = os.environ.get("eks_versions").split(",")
+db_table = os.environ['dynamodb_table']
+timedelta = os.environ['time_delta']
 ################################
 #### FUNCTIONS             #####
 ################################
@@ -101,28 +104,26 @@ def start_ssm(ami_id,version_number):
 def lambda_handler(event, context):
         
         for version in eks_ver:
-            latest = (get_LatestEKSAMI(version))
-            latest_amiID = latest['id']
-            build_date = latest['date']
+            latest_base_details = (get_LatestEKSAMI(str(version)))
+            latest_base_amiID = latest_base_details['id']
+            latest_base_build_date = latest_base_details['date']
        
-            print('latest ' + version + ' ami id = '+ latest_amiID)
+            print('latest ' + str(version) + ' ami id = '+ latest_base_amiID)
 
-            if (check_sourceAMIid(db_table,latest_amiID)) is True:
-                current_builds = json.loads(return_hdsbcBuilds(db_table,'sourceAMI.imageID',latest_amiID))
+            if (check_sourceAMIid(db_table,latest_base_amiID)) is True:
+                current_builds = json.loads(return_hdsbcBuilds(db_table,'sourceAMI.imageID',latest_base_amiID))
                 sorted_values = (sorted(current_builds, key = lambda i: i['hsbcVersion'], reverse = True))
-            
-            
-            if 1 == 2: # (check_sourceAMIid(db_table,latest_amiID)) is False:
+                lastbuild_date = sorted_values[0]['dateCreated']
+                delta_between_builddates = abs((datetime(latest_base_build_date.year, latest_base_build_date.month, latest_base_build_date.day) - datetime(lastbuild_date.year, lastbuild_date.month, lastbuild_date.day)).days)
+                if int(delta_between_builddates) > int(timedelta):
+                    print('Our build is more than '+ str(timedelta) + ' days old')
+                    print('Starting Build')
+                    versionNumber = (len(current_builds) + 1)
+                    start_ssm([latest_base_amiID],[str(versionNumber)]) 
+            elif (check_sourceAMIid(db_table,latest_base_amiID)) is False:
                 print('We HAVE NOT built an ami from the latest eks ' + version + ' build')
+                print('Starting Build')
                 ## starting the build    
-                #start_ssm(latest_amiID,ver)
-        
-            elif abs((build_date - today).days) > timedelta:
-                print('Our build is more than '+ str(timedelta) + ' days old')
-                ## starting the build    
-                #start_ssm(latest_amiID,ver)
+                #start_ssm(latest_base_amiID,ver)
             else:
                 print('Nothing to do - current build is less that 21 days and is using latest eks ami')
-
-    
-lambda_handler("","")

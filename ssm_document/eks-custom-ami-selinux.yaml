@@ -42,10 +42,10 @@ parameters:
     type: String
     description: sns topic for scan factory
     default: scan_factory_ami_submissions_v2 #arn:aws:sns:eu-west-1:618840856400:scan_factory_ami_submissions_v2
-  VersionIncrementValue:
-    type: Integer
-    description: VersionIncrementValue
-    default: 1
+  versionNumber:
+    type: String
+    description: versionNumber
+    default: "1"
   ScriptsBucket:
     type: String
     description: path of the scripts bucket
@@ -183,6 +183,8 @@ mainSteps:
       Parameters:
         commands:
           - yum remove -y aws-cli
+          - echo "Restarting Instance for SELinux Relabeling"
+          - exit 194
 
   - name: stopInstance
     action: "aws:changeInstanceState"
@@ -198,29 +200,33 @@ mainSteps:
   - name: CreateImage
     action: "aws:createImage"
     maxAttempts: 3
-    nextStep: terminateInstance
+    nextStep: CreateImageTags
     onFailure: "step:FailureHandling"
     inputs:
       InstanceId: "{{startInstances.InstanceIds}}"
-      ImageName: "Amazon-Linux-2-EKS-Optimized-SELinux-Enabled" #TODO:Create a proper name include version of EKS
+      ImageName: "Amazon-Linux-2-EKS-Optimized-SELinux-Enabled-v{{versionNumber}}"
       ImageDescription: "HSBC Build of Amazon Linux 2 EKS Optimized with SELinux Enabled."
 
-  # - name: CreateImageTags
-  #   action: "aws:createTags"
-  #   maxAttempts: 3
-  #   nextStep: ScanAMI_v2
-  #   onFailure: "step:FailureHandling"
-  #   inputs:
-  #     ResourceType: EC2
-  #     ResourceIds:
-  #       - "{{CreateImage.ImageId}}"
-  #     Tags:
-  #       - Key: "Name"
-  #         Value: "{{CreateImage.ImageId}}-EKS-Optimzed-SELinux-CISLevel1/v1"
-  #       - Key: "Owner"
-  #         Value: "GCS"
-  #       - Key: Version
-  #         Value: "{{VersionIncrementValue}}" #TODO:State to be written to DynamoDB
+  - name: CreateImageTags
+    action: "aws:createTags"
+    maxAttempts: 3
+    nextStep: terminateInstance
+    onFailure: "step:FailureHandling"
+    inputs:
+      ResourceType: EC2
+      ResourceIds:
+        - "{{CreateImage.ImageId}}"
+      Tags:
+        - Key: "Name"
+          Value: "HSBC-AmazonLinux2-EKS-Optimzed-SELinux-v{{versionNumber}}"
+        - Key: "Owner"
+          Value: "GCS"
+        - Key: Version
+          Value: "{{versionNumber}}"
+        - Key: "OS"
+          Value: "Amazon Linux 2"
+        - Key: "Product"
+          Value: "HSBC EKS Optimized SeLinux"
 
   - name: terminateInstance
     action: "aws:changeInstanceState"
@@ -242,7 +248,7 @@ mainSteps:
       Api: Publish
       TopicArn: "{{scanFactorySNS}}"
       #TODO: Message: "{'ImageId':'{{createImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
-      Message: "{'ImageId':'my-testImage','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
+      Message: "{'ImageId':'{{CreateImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
     outputs:
       - Name: MessageId
         Selector: $.MessageId

@@ -27,14 +27,12 @@ resource "aws_ssm_document" "eks_selinux" {
   document_type   = "Automation"
   document_format = "YAML"
   content = templatefile("${path.module}/ssm_document/eks-custom-ami-selinux.yaml", {
-    automation_role = aws_iam_role.ssm_build_automation_role.arn
-    #automation_role  = var.ssm_automation_role
-    instance_size         = var.ssm_instance_size
-    source_ami_id         = var.ssm_source_ami_id
-    subnet_id             = var.ssm_instance_subnet_id
-    securitygroup_id      = var.ssm_instance_securitygroup_id
-    instance_profile_name = aws_iam_instance_profile.ssm_build_instance_profile.name
-    #instance_profile_name = var.ssm_instance_profile_name
+    automation_role         = aws_iam_role.ssm_build_automation_role.arn
+    instance_size           = var.ssm_instance_size
+    source_ami_id           = var.ssm_source_ami_id
+    subnet_id               = var.ssm_instance_subnet_id
+    securitygroup_id        = var.ssm_instance_securitygroup_id
+    instance_profile_name   = aws_iam_instance_profile.ssm_build_instance_profile.name
     artifacts_bucket        = aws_s3_bucket.eks_ami_artifacts_bucket.id
     ssm_cloudwatch_loggroup = aws_cloudwatch_log_group.ssm_eks_imagebuild.id
     }
@@ -122,7 +120,10 @@ resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
 
   environment {
     variables = {
-      ssm_doc = aws_ssm_document.eks_selinux.name
+      ssm_doc        = aws_ssm_document.eks_selinux.name
+      eks_versions   = var.eks_versions_to_support
+      dynamodb_table = aws_dynamodb_table.ssm_eks_selinux_table.id
+      time_delta     = var.time_delta
     }
   }
 }

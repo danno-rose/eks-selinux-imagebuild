@@ -34,3 +34,15 @@ variable "ssm_instance_buildfiles_repo" {
 variable "eks_ami_artifacts_bucket_admin" {
   default = "some_arn"
 }
+
+variable "eks_versions_to_support" {
+  description = <<EOF
+  String formatted list NO Spaces and with \ to escape the quotes - e.g. \"1.14,1.13\"
+  EOF
+  default     = "\"1.14,1.13\""
+}
+
+variable "time_delta" {
+  default     = 21
+  description = "If we already have a build from Base AMI, how old is the maximum delta before we create again"
+}
