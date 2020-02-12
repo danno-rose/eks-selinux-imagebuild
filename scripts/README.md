@@ -168,18 +168,38 @@ A further definition of unconfined processes can be found here: https://access.r
 
 ### Docker
 
-Containers 
+Containers are labelled automatically by Docker, this is enabled in the docker configuration embedded in the AMI
 
-### Pod definitions
+```json
+{
+  "bridge": "none",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "10"
+  },
+  "live-restore": true,
+  "max-concurrent-downloads": 10,
+  "selinux-enabled":true
+}
+```
+
+When containers launched by Docker they are by default given the label `container_t`. This label allow most access required by applications running in containers. 
+
+We can tell Docker to launch containers as `unconfined_t` (or on RedHat systems `spc_t`), by using specific values in the Kubernetes pod definition
+
+#### Pod definition
+
+This is the value required in the pod definition to tell docker to launch as `unconfined_t`
 
 ```yaml
 securityContext:
 	privileged: true
 ```
 
+#### Pod Security Policies
 
-
-### Pod Security Policies
+If you are using PSPs then you will need to add the following to the PSP manifest in order for the Pod with security context defined above to be allowed to be launched.
 
 ```yaml
 spec:
