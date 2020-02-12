@@ -4,3 +4,6 @@
 .venv*
 *.TMP
 *.zip
+*.plan
+*test*
+.~*md
