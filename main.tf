@@ -192,7 +192,13 @@ resource "aws_s3_bucket_object" "upload_cis1_script" {
   etag                   = filemd5("${path.module}/scripts/cis-level1")
 }
 
-
+resource "aws_s3_bucket_object" "upload_cluster_autoscaler_module" {
+  key                    = "scripts/cis-level1"
+  bucket                 = aws_s3_bucket.eks_ami_artifacts_bucket.id
+  source                 = "${path.module}/scripts/cluster-autoscaler.pp"
+  server_side_encryption = "AES256"
+  etag                   = filemd5("${path.module}/scripts/cluster-autoscaler.pp")
+}
 
 resource "aws_s3_bucket_policy" "policy_eks_ami_artifacts_bucket" {
   bucket = aws_s3_bucket.eks_ami_artifacts_bucket.id

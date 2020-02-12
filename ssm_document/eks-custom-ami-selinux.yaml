@@ -30,10 +30,6 @@ parameters:
     type: Boolean
     description: (Optional) Terminate the instance when build failed
     default: true
-  testingBranch:
-    type: Boolean
-    description: (Optional) Clean up and create AMI on success
-    default: false
   scanFactorySNS:
     type: String
     description: sns topic for scan factory
@@ -55,14 +51,6 @@ parameters:
     description: Cloudwatch log group logging run command
     default: ${ssm_cloudwatch_loggroup}
 mainSteps:
-  # - name: testingBranch
-  #   action: "aws:branch"
-  #   inputs:
-  #     Choices:
-  #       - NextStep: ScanAMI_v2
-  #         Variable: "{{testingBranch}}"
-  #         BooleanEquals: true
-
   - name: startInstances
     action: "aws:runInstances"
     timeoutSeconds: 3600
@@ -112,14 +100,14 @@ mainSteps:
           - sudo mkdir -v /buildfiles
           - cd /buildfiles
           - aws s3 cp s3://{{ScriptsBucket}}/scripts/selinux selinux
-          # - aws s3 cp s3://{{ScriptsBucket}}/scripts/cis-level1 cis-level1
+          - aws s3 cp s3://{{ScriptsBucket}}/scripts/cluster-autoscaler.pp cluster-autoscaler.pp
 
   - name: runSELinuxScript
     action: "aws:runCommand"
     maxAttempts: 3
     timeoutSeconds: 3600
     onFailure: "step:FailureHandling"
-    nextStep: "cleanAndCreateBranch"
+    nextStep: "installCustomSELinuxModules"
     inputs:
       DocumentName: AWS-RunShellScript
       CloudWatchOutputConfig:
@@ -136,27 +124,27 @@ mainSteps:
         Selector: $.Status
         Type: String
 
-  # - name: runCISLevel1Script
-  #   action: "aws:runCommand"
-  #   maxAttempts: 3
-  #   timeoutSeconds: 3600
-  #   onFailure: "step:FailureHandling"
-  #   nextStep: "cleanAndCreateBranch"
-  #   inputs:
-  #     DocumentName: AWS-RunShellScript
-  #     CloudWatchOutputConfig:
-  #       CloudWatchOutputEnabled: true
-  #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
-  #     InstanceIds:
-  #       - "{{startInstances.InstanceIds}}"
-  #     Parameters:
-  #       commands:
-  #         - chmod +x /buildfiles/cisLevel1
-  #         - /buildfiles/cisLevel1
-  #   outputs:
-  #     - Name: JobStatus
-  #       Selector: $.Status
-  #       Type: String
+  - name: installCustomSELinuxModules
+    action: "aws:runCommand"
+    maxAttempts: 3
+    timeoutSeconds: 3600
+    onFailure: "step:FailureHandling"
+    nextStep: "cleanAndCreateBranch"
+    inputs:
+      DocumentName: AWS-RunShellScript
+      CloudWatchOutputConfig:
+        CloudWatchOutputEnabled: true
+        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      Parameters:
+        commands:
+          - echo "Installing custom linux modules"
+          - sudo semodule -i /buildfiles/cluster-autoscaler.pp
+    outputs:
+      - Name: JobStatus
+        Selector: $.Status
+        Type: String
 
   - name: cleanAndCreateBranch
     action: "aws:branch"
@@ -183,8 +171,6 @@ mainSteps:
       Parameters:
         commands:
           - yum remove -y aws-cli
-          - echo "Restarting Instance for SELinux Relabeling"
-          - exit 194
 
   - name: stopInstance
     action: "aws:changeInstanceState"
