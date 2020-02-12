@@ -95,7 +95,7 @@ To make this policy package active, execute:
 To install the module, execute:
 ```bash
 sudo semodule -i mycertwatch-policy.pp
-``` 
+```
 running command as the Linux root user.
 
 ### SELinux Permissive Mode
@@ -154,3 +154,40 @@ sudo grep denied /var/log/audit/audit.log | audit2allow -a -w
 ```
 
 the messages you see will be more relevant.
+
+## Unconfined
+
+On rare occasions it can be necessary to run containers as the selinux type `unconfined_t`.
+
+The types of container that require this level of access tend to fall into two categories: 
+
+1. Containers that need to access or affect change on low level system artifacts, such as network ports. The AWS CNI container is such an example.
+2. Containers that require a wide range file or folder access.
+
+A further definition of unconfined processes can be found here: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/security-enhanced_linux/sect-security-enhanced_linux-targeted_policy-unconfined_processes
+
+### Docker
+
+Containers 
+
+### Pod definitions
+
+```yaml
+securityContext:
+	privileged: true
+```
+
+
+
+### Pod Security Policies
+
+```yaml
+spec:
+  privileged: true
+  allowPrivilegeEscalation: true
+```
+
+
+
+
+
