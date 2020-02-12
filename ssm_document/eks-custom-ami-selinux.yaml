@@ -151,7 +151,7 @@ mainSteps:
     inputs:
       Choices:
         - NextStep: removePreReqs
-          Variable: "{{runSELinuxScript.JobStatus}}"
+          Variable: "{{installCustomSELinuxModules.JobStatus}}"
           StringEquals: Success
       Default: terminateInstance
 
