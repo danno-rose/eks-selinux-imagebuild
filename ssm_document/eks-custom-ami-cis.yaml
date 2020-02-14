@@ -206,7 +206,7 @@ mainSteps:
     onFailure: "step:FailureHandling"
     inputs:
       InstanceId: "{{startInstances.InstanceIds}}"
-      ImageName: "Amazon-Linux-2-EKS-Optimized-SELinux-Enabled" #TODO:Create a proper name include version of EKS
+      ImageName: "Amazon-Linux-2-EKS-Optimized-SELinux-Enabled"
       ImageDescription: "HSBC Build of Amazon Linux 2 EKS Optimized with SELinux and CIS Level 1."
 
   # - name: CreateImageTags

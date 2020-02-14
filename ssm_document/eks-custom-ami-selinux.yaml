@@ -248,7 +248,7 @@ mainSteps:
   #     Service: sns
   #     Api: Publish
   #     TopicArn: "{{scanFactorySNS}}"
-  #     #TODO: Message: "{'ImageId':'{{createImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
+  #     Message: "{'ImageId':'{{createImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
   #     Message: "{'ImageId':'my-testImage','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
   #   outputs:
   #     - Name: MessageId

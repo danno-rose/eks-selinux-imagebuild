@@ -14,10 +14,6 @@ terraform {
 }
 
 
-#TODO: AddPermissions to read and write to table from execute lambda
-#TODO: Create cloudwatch log group
-
-
 ### ============================================= ###
 ###  SSM Automation Document                      ###
 ### ============================================= ###
