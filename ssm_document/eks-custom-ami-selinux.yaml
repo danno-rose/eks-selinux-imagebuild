@@ -67,84 +67,98 @@ mainSteps:
       UserData: "{{SSMInstallationUserData}}"
       IamInstanceProfileName: "{{ IAMInstanceProfile }}"
 
-  - name: installPreReqs
+  - name: installSELinuxRequirements
     action: aws:runCommand
     maxAttempts: 3
     timeoutSeconds: 300
     onFailure: "step:FailureHandling"
     inputs:
-      DocumentName: AWS-RunShellScript
+      DocumentName: eks-ami-selinux
       CloudWatchOutputConfig:
-        CloudWatchOutputEnabled: true
-        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
       InstanceIds:
         - "{{startInstances.InstanceIds}}"
       Parameters:
         commands:
           - yum install -y aws-cli
 
-  - name: downloadS3Files
-    action: aws:runCommand
-    maxAttempts: 3
-    timeoutSeconds: 300
-    onFailure: "step:FailureHandling"
-    inputs:
-      DocumentName: AWS-RunShellScript
-      CloudWatchOutputConfig:
-        CloudWatchOutputEnabled: true
-        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
-      InstanceIds:
-        - "{{startInstances.InstanceIds}}"
-      Parameters:
-        commands:
-          - sudo mkdir -v /buildfiles
-          - cd /buildfiles
-          - aws s3 cp s3://{{ScriptsBucket}}/scripts/selinux selinux
-          - aws s3 cp s3://{{ScriptsBucket}}/scripts/cluster-autoscaler.pp cluster-autoscaler.pp
+  # - name: installPreReqs
+  #   action: aws:runCommand
+  #   maxAttempts: 3
+  #   timeoutSeconds: 300
+  #   onFailure: "step:FailureHandling"
+  #   inputs:
+  #     DocumentName: AWS-RunShellScript
+  #     CloudWatchOutputConfig:
+  #       CloudWatchOutputEnabled: true
+  #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+  #     InstanceIds:
+  #       - "{{startInstances.InstanceIds}}"
+  #     Parameters:
+  #       commands:
+  #         - yum install -y aws-cli
 
-  - name: runSELinuxScript
-    action: "aws:runCommand"
-    maxAttempts: 3
-    timeoutSeconds: 3600
-    onFailure: "step:FailureHandling"
-    nextStep: "installCustomSELinuxModules"
-    inputs:
-      DocumentName: AWS-RunShellScript
-      CloudWatchOutputConfig:
-        CloudWatchOutputEnabled: true
-        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
-      InstanceIds:
-        - "{{startInstances.InstanceIds}}"
-      Parameters:
-        commands:
-          - chmod +x /buildfiles/selinux
-          - /buildfiles/selinux
-    outputs:
-      - Name: JobStatus
-        Selector: $.Status
-        Type: String
+  # - name: downloadS3Files
+  #   action: aws:runCommand
+  #   maxAttempts: 3
+  #   timeoutSeconds: 300
+  #   onFailure: "step:FailureHandling"
+  #   inputs:
+  #     DocumentName: AWS-RunShellScript
+  #     CloudWatchOutputConfig:
+  #       CloudWatchOutputEnabled: true
+  #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+  #     InstanceIds:
+  #       - "{{startInstances.InstanceIds}}"
+  #     Parameters:
+  #       commands:
+  #         - sudo mkdir -v /buildfiles
+  #         - cd /buildfiles
+  #         - aws s3 cp s3://{{ScriptsBucket}}/scripts/selinux selinux
+  #         - aws s3 cp s3://{{ScriptsBucket}}/scripts/cluster-autoscaler.pp cluster-autoscaler.pp
 
-  - name: installCustomSELinuxModules
-    action: "aws:runCommand"
-    maxAttempts: 3
-    timeoutSeconds: 3600
-    onFailure: "step:FailureHandling"
-    nextStep: "cleanAndCreateBranch"
-    inputs:
-      DocumentName: AWS-RunShellScript
-      CloudWatchOutputConfig:
-        CloudWatchOutputEnabled: true
-        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
-      InstanceIds:
-        - "{{startInstances.InstanceIds}}"
-      Parameters:
-        commands:
-          - echo "Installing custom linux modules"
-          - sudo semodule -i /buildfiles/cluster-autoscaler.pp
-    outputs:
-      - Name: JobStatus
-        Selector: $.Status
-        Type: String
+  # - name: runSELinuxScript
+  #   action: "aws:runCommand"
+  #   maxAttempts: 3
+  #   timeoutSeconds: 3600
+  #   onFailure: "step:FailureHandling"
+  #   nextStep: "installCustomSELinuxModules"
+  #   inputs:
+  #     DocumentName: AWS-RunShellScript
+  #     CloudWatchOutputConfig:
+  #       CloudWatchOutputEnabled: true
+  #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+  #     InstanceIds:
+  #       - "{{startInstances.InstanceIds}}"
+  #     Parameters:
+  #       commands:
+  #         - chmod +x /buildfiles/selinux
+  #         - /buildfiles/selinux
+  #   outputs:
+  #     - Name: JobStatus
+  #       Selector: $.Status
+  #       Type: String
+
+  # - name: installCustomSELinuxModules
+  #   action: "aws:runCommand"
+  #   maxAttempts: 3
+  #   timeoutSeconds: 3600
+  #   onFailure: "step:FailureHandling"
+  #   nextStep: "cleanAndCreateBranch"
+  #   inputs:
+  #     DocumentName: AWS-RunShellScript
+  #     CloudWatchOutputConfig:
+  #       CloudWatchOutputEnabled: true
+  #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+  #     InstanceIds:
+  #       - "{{startInstances.InstanceIds}}"
+  #     Parameters:
+  #       commands:
+  #         - echo "Installing custom linux modules"
+  #         - sudo semodule -i /buildfiles/cluster-autoscaler.pp
+  #   outputs:
+  #     - Name: JobStatus
+  #       Selector: $.Status
+  #       Type: String
 
   - name: cleanAndCreateBranch
     action: "aws:branch"
