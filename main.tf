@@ -39,21 +39,15 @@ resource "aws_ssm_document" "eks_selinux" {
 #   name            = "eks_ami_selinux"
 #   document_type   = "Automation"
 #   document_format = "YAML"
-#   content = templatefile("${path.module}/ssm_document/eks-custom-ami.yaml", {
-#     automation_role = aws_iam_role.ssm_build_automation_role.arn
-#     #automation_role  = var.ssm_automation_role
-#     instance_size         = var.ssm_instance_size
-#     source_ami_id         = var.ssm_source_ami_id
-#     subnet_id             = var.ssm_instance_subnet_id
-#     securitygroup_id      = var.ssm_instance_securitygroup_id
-#     instance_profile_name = aws_iam_instance_profile.ssm_build_instance_profile.name
-#     #instance_profile_name = var.ssm_instance_profile_name
-#     buildfiles_repo         = var.ssm_instance_buildfiles_repo
-#     artifacts_bucket        = aws_s3_bucket.eks_ami_artifacts_bucket.id
-#     ssm_cloudwatch_loggroup = aws_cloudwatch_log_group.ssm_eks_imagebuild.id
-#     }
-#   )
+#   content         = "${path.module}/ssm_document/eks-custom-ami-selinux.yaml"
 # }
+
+resource "aws_ssm_document" "eks_selinux_smoketest" {
+  name            = "eks_ami_selinux_smoketest"
+  document_type   = "Automation"
+  document_format = "YAML"
+  content         = "${path.module}/ssm_document/eks-custom-ami-eks-smoketest.yaml"
+}
 
 ### ============================================= ###
 ### Cloudwatch logs and trigger for SSM           ###
