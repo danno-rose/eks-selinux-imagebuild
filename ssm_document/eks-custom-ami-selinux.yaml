@@ -200,12 +200,25 @@ mainSteps:
   - name: CreateImage
     action: "aws:createImage"
     maxAttempts: 3
-    nextStep: CreateImageTags
+    nextStep: Secondary_Automation_Workflow
     onFailure: "step:FailureHandling"
     inputs:
       InstanceId: "{{startInstances.InstanceIds}}"
       ImageName: "Amazon-Linux-2-EKS-Optimized-SELinux-Enabled-v{{versionNumber}}"
       ImageDescription: "HSBC Build of Amazon Linux 2 EKS Optimized with SELinux Enabled."
+
+  # - name: Secondary_Automation_Workflow
+  #   action: aws:executeAutomation
+  #   maxAttempts: 3
+  #   timeoutSeconds: 3600
+  #   onFailure: Abort
+  #   inputs:
+  #     DocumentName: eks_ami_selinux_smoketest
+  #     RuntimeParameters:
+  #       amiId: "{{CreateImage.ImageId}}"
+  #       subnetID: "{{ subnetID }}"
+  #       securityGroupID: "{{ securityGroupID }}"
+  #       IAMInstanceProfile: "{{ IAMInstanceProfile }}"
 
   - name: CreateImageTags
     action: "aws:createTags"
