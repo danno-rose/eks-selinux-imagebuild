@@ -46,7 +46,7 @@ resource "aws_ssm_document" "eks_selinux_smoketest" {
   name            = "eks_ami_selinux_smoketest"
   document_type   = "Automation"
   document_format = "YAML"
-  content         = "${path.module}/ssm_document/eks-custom-ami-eks-smoketest.yaml"
+  content         = file("${path.module}/ssm_document/eks-custom-ami-eks-smoketest.yaml")
 }
 
 ### ============================================= ###
