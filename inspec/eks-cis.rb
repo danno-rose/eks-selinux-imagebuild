@@ -79,7 +79,7 @@ control '4.1.9 kublet conf' do
     end
 end
 
-control '4.1.10 kublet' do
+control '4.1.10 kublet conf' do
     title 'Ensure that the kubelet configuration file ownership is set to root:root'
     paths = [
         "/etc/eksctl/kubelet.yaml"
@@ -91,4 +91,53 @@ control '4.1.10 kublet' do
             end
         end
     end
+end
+
+### Kublet Recommendations
+control '4.2.1 kublet yaml' do
+    title 'Ensure that the anonymous-auth argument is set to false'
+    kfile = file("/etc/eksctl/kubelet.yaml")
+        describe command("cat #{kfile} | grep anonymous -A 1 | grep enabled ") do
+            its('stdout') { should include "false" }
+        end
+end
+
+control '4.2.2 kublet yaml' do
+    title 'Ensure that the --authorization-mode argument is not set to AlwaysAllow'
+    kfile = file("/etc/eksctl/kubelet.yaml")
+        describe command("cat #{kfile} | grep authorization -A 1 | grep mode") do
+            its('stdout') { should include "Webhook" }
+        end
+end
+
+control '4.2.3 kublet yaml' do
+    title 'Ensure that the --client-ca-file argument is set as appropriate'
+    kfile = file("/etc/eksctl/kubelet.yaml")
+        describe command("cat #{kfile} | grep x509 -A1 | grep clientCAFile") do
+            its('stdout') { should include "ca.crt" }
+        end
+end
+
+control '4.2.8 kublet yaml' do
+    title 'Ensure that the --hostname-override argument is not set'
+    kfile = file("/etc/eksctl/kubelet.yaml")
+        describe command("cat #{kfile}") do
+            its('stdout') { should_not include "hostname" }
+        end
+end
+
+control '4.2.11 kublet yaml' do
+    title 'Ensure that the --rotate-certificates argument is not set to false'
+    kfile = file("/etc/eksctl/kubelet.yaml")
+        describe command("cat #{kfile} | grep RotateKubeletServerCertificate") do
+            its('stdout') { should_not include "false" }
+        end
+end
+
+control '4.2.12 kublet yaml' do
+    title 'Ensure that the RotateKubeletServerCertificate argument is set to true'
+    kfile = file("/etc/eksctl/kubelet.yaml")
+        describe command("cat #{kfile} | grep RotateKubeletServerCertificate") do
+            its('stdout') { should include "true" }
+        end
 end
