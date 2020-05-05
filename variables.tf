@@ -15,16 +15,15 @@ variable "ssm_instance_profile_name" {
   default = "value_profile"
 }
 
+variable "ssm_instance_assume_role" {
+}
+
 variable "ssm_source_ami_id" {
   default = ""
 }
 
 variable "ssm_instance_size" {
   default = "c5.large"
-}
-
-variable "ssm_automation_role" {
-  default = "value"
 }
 
 variable "ssm_instance_buildfiles_repo" {
@@ -45,4 +44,7 @@ variable "eks_versions_to_support" {
 variable "time_delta" {
   default     = 21
   description = "If we already have a build from Base AMI, how old is the maximum delta before we create again"
+}
+variable "WorkerNode_Stack_URL" {
+  default = "https://amazon-eks.s3-us-west-2.amazonaws.com/cloudformation/2019-11-15/amazon-eks-nodegroup.yaml"
 }

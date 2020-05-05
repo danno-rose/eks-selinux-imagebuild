@@ -50,110 +50,148 @@ parameters:
     type: String
     description: Cloudwatch log group logging run command
     default: ${ssm_cloudwatch_loggroup}
+  eksClusterSmoketestDoc:
+    type: String
+    description: Document name for eks smokeTestAMI
+    default: ${eks_smoketest_ssm_doc}
+  amiConfigProfile:
+    type: String
+    description: branch
+    default: EKS
 mainSteps:
-  # - name: startInstances
-  #   action: "aws:runInstances"
-  #   timeoutSeconds: 3600
-  #   maxAttempts: 1
-  #   onFailure: Abort
-  #   inputs:
-  #     ImageId: "{{ amiId }}"
-  #     InstanceType: "{{instanceType}}"
-  #     MinInstanceCount: 1
-  #     MaxInstanceCount: 1
-  #     SubnetId: "{{ subnetID }}"
-  #     SecurityGroupIds:
-  #       - "{{ securityGroupID }}"
-  #     UserData: "{{SSMInstallationUserData}}"
-  #     IamInstanceProfileName: "{{ IAMInstanceProfile }}"
+  - name: startInstances
+    action: "aws:runInstances"
+    timeoutSeconds: 3600
+    maxAttempts: 1
+    onFailure: Abort
+    inputs:
+      ImageId: "{{ amiId }}"
+      InstanceType: "{{instanceType}}"
+      MinInstanceCount: 1
+      MaxInstanceCount: 1
+      SubnetId: "{{ subnetID }}"
+      SecurityGroupIds:
+        - "{{ securityGroupID }}"
+      UserData: "{{SSMInstallationUserData}}"
+      IamInstanceProfileName: "{{ IAMInstanceProfile }}"
 
-  # # - name: installPreReqs
-  # #   action: aws:runCommand
-  # #   maxAttempts: 3
-  # #   timeoutSeconds: 300
-  # #   onFailure: "step:FailureHandling"
-  # #   inputs:
-  # #     DocumentName: AWS-RunShellScript
-  # #     CloudWatchOutputConfig:
-  # #       CloudWatchOutputEnabled: true
-  # #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
-  # #     InstanceIds:
-  # #       - "{{startInstances.InstanceIds}}"
-  # #     Parameters:
-  # #       commands:
-  # #         - yum install -y aws-cli
+  - name: installPreReqs
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 300
+    onFailure: "step:FailureHandling"
+    inputs:
+      DocumentName: AWS-RunShellScript
+      CloudWatchOutputConfig:
+        CloudWatchOutputEnabled: true
+        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      Parameters:
+        commands:
+          - yum install -y aws-cli
 
-  # # - name: downloadS3Files
-  # #   action: aws:runCommand
-  # #   maxAttempts: 3
-  # #   timeoutSeconds: 300
-  # #   onFailure: "step:FailureHandling"
-  # #   inputs:
-  # #     DocumentName: AWS-RunShellScript
-  # #     CloudWatchOutputConfig:
-  # #       CloudWatchOutputEnabled: true
-  # #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
-  # #     InstanceIds:
-  # #       - "{{startInstances.InstanceIds}}"
-  # #     Parameters:
-  # #       commands:
-  # #         - sudo mkdir -v /buildfiles
-  # #         - cd /buildfiles
-  # #         - aws s3 cp s3://{{ScriptsBucket}}/scripts/selinux selinux
-  # #         - aws s3 cp s3://{{ScriptsBucket}}/scripts/cluster-autoscaler.pp cluster-autoscaler.pp
+  - name: downloadS3Files
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 300
+    onFailure: "step:FailureHandling"
+    inputs:
+      DocumentName: AWS-RunShellScript
+      CloudWatchOutputConfig:
+        CloudWatchOutputEnabled: true
+        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      Parameters:
+        commands:
+          - "sudo aws s3 cp s3://{{ScriptsBucket}}/scripts /buildfiles --recursive"
 
-  # # - name: runSELinuxScript
-  # #   action: "aws:runCommand"
-  # #   maxAttempts: 3
-  # #   timeoutSeconds: 3600
-  # #   onFailure: "step:FailureHandling"
-  # #   nextStep: "installCustomSELinuxModules"
-  # #   inputs:
-  # #     DocumentName: AWS-RunShellScript
-  # #     CloudWatchOutputConfig:
-  # #       CloudWatchOutputEnabled: true
-  # #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
-  # #     InstanceIds:
-  # #       - "{{startInstances.InstanceIds}}"
-  # #     Parameters:
-  # #       commands:
-  # #         - chmod +x /buildfiles/selinux
-  # #         - /buildfiles/selinux
-  # #   outputs:
-  # #     - Name: JobStatus
-  # #       Selector: $.Status
-  # #       Type: String
+  - name: runSELinuxScript
+    action: "aws:runCommand"
+    maxAttempts: 3
+    timeoutSeconds: 3600
+    onFailure: "step:FailureHandling"
+    #nextStep: "installCustomSELinuxModules"
+    inputs:
+      DocumentName: AWS-RunShellScript
+      CloudWatchOutputConfig:
+        CloudWatchOutputEnabled: true
+        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      Parameters:
+        commands:
+          - |
+            #!/usr/bin/env bash
+            ## update system and install seLinux tools
+            sudo yum update -y
+            sudo yum install -y policycoreutils-python selinux-policy-devel jq
 
-  # # - name: installCustomSELinuxModules
-  # #   action: "aws:runCommand"
-  # #   maxAttempts: 3
-  # #   timeoutSeconds: 3600
-  # #   onFailure: "step:FailureHandling"
-  # #   nextStep: "cleanAndCreateBranch"
-  # #   inputs:
-  # #     DocumentName: AWS-RunShellScript
-  # #     CloudWatchOutputConfig:
-  # #       CloudWatchOutputEnabled: true
-  # #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
-  # #     InstanceIds:
-  # #       - "{{startInstances.InstanceIds}}"
-  # #     Parameters:
-  # #       commands:
-  # #         - echo "Installing custom linux modules"
-  # #         - sudo semodule -i /buildfiles/cluster-autoscaler.pp
-  # #   outputs:
-  # #     - Name: JobStatus
-  # #       Selector: $.Status
-  # #       Type: String
+            # ## Install the SELinux Tools -- install RPMS without dependancies, in order to get around cyclic dependancies
+            cd ~
+            wget https://rpmfind.net/linux/centos/7.7.1908/os/x86_64/Packages/setroubleshoot-server-3.2.30-7.el7.x86_64.rpm
+            wget https://rpmfind.net/linux/centos/7.7.1908/os/x86_64/Packages/setroubleshoot-plugins-3.0.67-4.el7.noarch.rpm
+            sudo rpm -i  --nodeps setroubleshoot-server-3.2.30-7.el7.x86_64.rpm
+            sudo rpm -i  --nodeps setroubleshoot-plugins-3.0.67-4.el7.noarch.rpm
+            #Then yum re-install to include dependancies
+            sudo yum reinstall -y setroubleshoot-server-3.2.30-7.el7.x86_64.rpm
+            sudo yum reinstall -y setroubleshoot-plugins-3.0.67-4.el7.noarch.rpm
 
-  # - name: cleanAndCreateBranch
-  #   action: "aws:branch"
-  #   inputs:
-  #     Choices:
-  #       - NextStep: removePreReqs
-  #         Variable: "{{installCustomSELinuxModules.JobStatus}}"
-  #         StringEquals: Success
-  #     Default: terminateInstance
+            ## Installing the Container-SELinux Policy
+            sudo yum install -y http://vault.centos.org/7.6.1810/extras/x86_64/Packages/container-selinux-2.68-1.el7.noarch.rpm
+
+            ## Update SELinux Config Files
+            sudo sed -i 's/SELINUX=disabled/SELINUX=enforcing/g' /etc/selinux/config
+
+            ## updating the docker runtime config
+            VAL=$(cat /etc/docker/daemon.json)
+            sudo mv /etc/docker/daemon.json /etc/docker/daemon.json_bak
+            echo $VAL | jq '. += {"selinux-enabled":true}' | sudo tee -a /etc/docker/daemon.json
+    outputs:
+      - Name: JobStatus
+        Selector: $.Status
+        Type: String
+
+  - name: installCustomSELinuxModules
+    action: "aws:runCommand"
+    maxAttempts: 3
+    timeoutSeconds: 3600
+    onFailure: "step:FailureHandling"
+    nextStep: "cleanAndCreateBranch"
+    inputs:
+      DocumentName: AWS-RunShellScript
+      CloudWatchOutputConfig:
+        CloudWatchOutputEnabled: true
+        CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
+      InstanceIds:
+        - "{{startInstances.InstanceIds}}"
+      Parameters:
+        commands:
+          - set -e
+          - echo "Installing custom linux modules"
+          - sudo semodule -i /buildfiles/cluster-autoscaler.pp
+          - yes | sudo cp /buildfiles/hsbc-hostname-awsid /usr/lib/systemd/hsbc-hostname-awsid
+          - sudo chown root.root /usr/lib/systemd/hsbc-hostname-awsid || true
+          - sudo chmod 755 /usr/lib/systemd/hsbc-hostname-awsid || true
+          - yes | sudo cp /buildfiles/hsbc-hostname-id.service || /etc/systemd/system/hsbc-hostname-id.service
+          - sudo chown root.root /etc/systemd/system/hsbc-hostname-id.service || true
+          - sudo chmod 644 /etc/systemd/system/hsbc-hostname-id.service || true
+          - sudo systemctl enable hsbc-hostname-id.service
+          - sudo systemctl start hsbc-hostname-id.service
+    outputs:
+      - Name: JobStatus
+        Selector: $.Status
+        Type: String
+
+  - name: cleanAndCreateBranch
+    action: "aws:branch"
+    inputs:
+      Choices:
+        - NextStep: stopInstance
+          Variable: "{{runSELinuxScript.JobStatus}}"
+          StringEquals: Success
+      Default: terminateInstance
 
   # - name: removePreReqs
   #   action: aws:runCommand
@@ -172,82 +210,47 @@ mainSteps:
   #       commands:
   #         - yum remove -y aws-cli
 
-  # - name: stopInstance
-  #   action: "aws:changeInstanceState"
-  #   timeoutSeconds: 1200
-  #   maxAttempts: 1
-  #   onFailure: "step:FailureHandling"
-  #   nextStep: CreateImage
-  #   inputs:
-  #     InstanceIds:
-  #       - "{{ startInstances.InstanceIds }}"
-  #     DesiredState: stopped
+  - name: stopInstance
+    action: "aws:changeInstanceState"
+    timeoutSeconds: 1200
+    maxAttempts: 1
+    onFailure: "step:FailureHandling"
+    nextStep: CreateImage
+    inputs:
+      InstanceIds:
+        - "{{ startInstances.InstanceIds }}"
+      DesiredState: stopped
 
-  # - name: CreateImage
-  #   action: "aws:createImage"
-  #   maxAttempts: 3
-  #   nextStep: SmokeTestAutomation
-  #   onFailure: "step:FailureHandling"
-  #   inputs:
-  #     InstanceId: "{{startInstances.InstanceIds}}"
-  #     ImageName: "Amazon-Linux-2-EKS-Optimized-SELinux-Enabled-v{{versionNumber}}"
-  #     ImageDescription: "HSBC Build of Amazon Linux 2 EKS Optimized with SELinux Enabled."
+  - name: CreateImage
+    action: "aws:createImage"
+    maxAttempts: 3
+    nextStep: runSmokeTestAMI
+    onFailure: "step:FailureHandling"
+    inputs:
+      InstanceId: "{{startInstances.InstanceIds}}"
+      ImageName: "Amazon-Linux-2-EKS-Optimized-SELinux-Enabled-v{{versionNumber}}-{{ startInstances.InstanceIds }}"
+      ImageDescription: "HSBC Build of Amazon Linux 2 EKS Optimized with SELinux Enabled."
 
-  # - name: SmokeTestAutomation
-  #   action: aws:executeAutomation
-  #   maxAttempts: 3
-  #   timeoutSeconds: 300
-  #   onFailure: "step:FailureHandling"
-  #   nextStep: stopInstance
-  #   inputs:
-  #     DocumentName: AWS-RunShellScript
-  #     CloudWatchOutputConfig:
-  #       CloudWatchOutputEnabled: true
-  #       CloudWatchLogGroupName: "{{ CloudWatchLogGroupName }}"
-  #     InstanceIds:
-  #       - "{{startInstances.InstanceIds}}"
-  #     Parameters:
-  #       commands:
-  #         - yum remove -y aws-cli
+  - name: runSmokeTestAMI
+    action: aws:branch
+    inputs:
+      Choices:
+        - NextStep: startEKSTestingAutomation
+          Variable: "{{ amiConfigProfile }}"
+          StringEquals: EKS
+      Default: CreateImageTags
 
-  # - name: stopInstance
-  #   action: "aws:changeInstanceState"
-  #   timeoutSeconds: 1200
-  #   maxAttempts: 1
-  #   onFailure: "step:FailureHandling"
-  #   nextStep: CreateImage
-  #   inputs:
-  #     InstanceIds:
-  #       - "{{ startInstances.InstanceIds }}"
-  #     DesiredState: stopped
-
-  # - name: CreateImage
-  #   action: "aws:createImage"
-  #   maxAttempts: 3
-  #   nextStep: Secondary_Automation_Workflow
-  #   onFailure: "step:FailureHandling"
-  #   timeoutSeconds: 3600
-  #   onFailure: Abort
-  #   inputs:
-  #     DocumentName: eks_ami_selinux_smoketest
-  #     RuntimeParameters:
-  #       amiId: "{{ amiId }}"
-  #       subnetID: "{{ subnetID }}"
-  #       securityGroupID: "{{ securityGroupID }}"
-  #       IAMInstanceProfile: "{{ IAMInstanceProfile }}"
-
-  - name: Secondary_Automation_Workflow
+  - name: startEKSTestingAutomation
     action: aws:executeAutomation
     maxAttempts: 1
     timeoutSeconds: 3600
-    onFailure: Abort
+    onFailure: "step:FailureHandling"
+    nextStep: CreateImageTags
     inputs:
-      DocumentName: eks_ami_selinux_smoketest
+      DocumentName: "{{eksClusterSmoketestDoc}}"
       RuntimeParameters:
-        amiId: "{{ amiId }}"
-        subnetID: "{{ subnetID }}"
-        securityGroupID: "{{ securityGroupID }}"
-        IAMInstanceProfile: "{{ IAMInstanceProfile }}"
+        eksNodeImageId: "{{CreateImage.ImageId}}" #"ami-035aeafef040ecd08"
+
   - name: CreateImageTags
     action: "aws:createTags"
     maxAttempts: 3
@@ -274,28 +277,28 @@ mainSteps:
     timeoutSeconds: 1200
     maxAttempts: 1
     onFailure: Continue
-    nextStep: SendToEKSTestHarness
+    #nextStep: SendToEKSTestHarness
     inputs:
       InstanceIds:
         - "{{ startInstances.InstanceIds }}"
       DesiredState: terminated
 
-  - name: SendToEKSTestHarness
-    action: "aws:executeAwsApi"
-    nextStep: endBuild
-    onFailure: "step:FailureHandling"
-    inputs:
-      Service: sns
-      Api: Publish
-      TopicArn: "{{scanFactorySNS}}"
-      #TODO: Message: "{'ImageId':'{{createImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
-      Message: "{'ImageId':'{{CreateImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
-    outputs:
-      - Name: MessageId
-        Selector: $.MessageId
-        Type: String
+  # - name: SendToEKSTestHarness
+  #   action: "aws:executeAwsApi"
+  #   nextStep: endBuild
+  #   onFailure: "step:FailureHandling"
+  #   inputs:
+  #     Service: sns
+  #     Api: Publish
+  #     TopicArn: "{{scanFactorySNS}}"
+  #     #TODO: Message: "{'ImageId':'{{createImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
+  #     Message: "{'ImageId':'{{CreateImage.ImageId}}','AccountId':'{{global:ACCOUNT_ID}}','Notifications':'arn:aws:sns:{{global:REGION}}:{{global:ACCOUNT_ID}}:{{NotificationSNS}}','Region':'{{global:REGION}}'}"
+  #   outputs:
+  #     - Name: MessageId
+  #       Selector: $.MessageId
+  #       Type: String
 
-  # - name: ScanAMI_v2
+  # # - name: ScanAMI_v2
   #   action: "aws:executeAwsApi"
   #   nextStep: endBuild
   #   onFailure: "step:FailureHandling"

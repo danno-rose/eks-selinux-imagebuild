@@ -1,24 +1,24 @@
-provider "aws" {
-  region = var.aws_region
-}
+//provider "aws" {
+//  region = "eu-west-1"
+//}
 
-terraform {
-  backend "remote" {
-    hostname     = "app.terraform.io"
-    organization = "cloudorg-1"
+# terraform {
+#   backend "remote" {
+#     hostname     = "app.terraform.io"
+#     organization = "cloudorg-1"
 
-    workspaces {
-      name = "eks-selinux-imagebuild"
-    }
-  }
-}
+#     workspaces {
+#       name = "eks-selinux-imagebuild"
+#     }
+#   }
+# }
 
 ### ============================================= ###
 ###  SSM Automation Document                      ###
 ### ============================================= ###
 
 resource "aws_ssm_document" "eks_selinux" {
-  name            = "eks_ami_selinux"
+  name            = "eks_ami_selinux-${random_id.random_hex.hex}"
   document_type   = "Automation"
   document_format = "YAML"
   content = templatefile("${path.module}/ssm_document/eks-custom-ami-selinux.yaml", {
@@ -30,6 +30,7 @@ resource "aws_ssm_document" "eks_selinux" {
     instance_profile_name   = aws_iam_instance_profile.ssm_build_instance_profile.name
     artifacts_bucket        = aws_s3_bucket.eks_ami_artifacts_bucket.id
     ssm_cloudwatch_loggroup = aws_cloudwatch_log_group.ssm_eks_imagebuild.id
+    eks_smoketest_ssm_doc   = aws_ssm_document.eks_selinux_smoketest.name
     }
   )
 }
@@ -43,37 +44,45 @@ resource "aws_ssm_document" "eks_selinux" {
 # }
 
 resource "aws_ssm_document" "eks_selinux_smoketest" {
-  name            = "eks_ami_selinux_smoketest"
+  name            = "eks_ami_selinux_smoketest-${random_id.random_hex.hex}"
   document_type   = "Automation"
   document_format = "YAML"
-  content         = file("${path.module}/ssm_document/eks-custom-smoketest.yaml")
+  content = templatefile("${path.module}/ssm_document/eks-custom-smoketest.yaml", {
+    Node_Stack_URL                = var.WorkerNode_Stack_URL
+    eks_stackname                 = "eks-functional-testing-stack"
+    eks_ControlPlaneSecurityGroup = "sg-0fe21e2c5a4cb1a92"
+    eks_node_subnet               = "subnet-0983a3ee4a0d54d25"
+    eks_vpc_id                    = "vpc-02432724f1a08390f"
+    kubectl_instance_profile      = aws_iam_instance_profile.ssm_build_instance_profile.name
+    kubectl_AssumeRole            = var.ssm_instance_assume_role
+  })
 }
 
 ### ============================================= ###
 ### Cloudwatch logs and trigger for SSM           ###
 ### ============================================= ###
 resource "aws_cloudwatch_log_group" "ssm_eks_imagebuild" {
-  name = "ssm-eks-optimized-image-build"
+  name = "ssm-eks-optimized-image-build-${random_id.random_hex.hex}"
 }
 
-resource "aws_cloudwatch_event_target" "ssm_pipeline_lambda_trigger" {
-  rule = aws_cloudwatch_event_rule.ssm_build_schedule.name
-  arn  = aws_lambda_function.ssm_automation_trigger_lambda.arn
-}
+# resource "aws_cloudwatch_event_target" "ssm_pipeline_lambda_trigger" {
+#   rule = aws_cloudwatch_event_rule.ssm_build_schedule.name
+#   arn  = aws_lambda_function.ssm_automation_trigger_lambda.arn
+# }
 
-resource "aws_cloudwatch_event_rule" "ssm_build_schedule" {
-  name                = "ssm-eks-selinux-image-build-schedule"
-  description         = "Schedule for the EKS image build"
-  schedule_expression = "rate(21 days)"
-}
+# resource "aws_cloudwatch_event_rule" "ssm_build_schedule" {
+#   name                = "ssm-eks-selinux-image-build-schedule"
+#   description         = "Schedule for the EKS image build"
+#   schedule_expression = "rate(21 days)"
+# }
 
-resource "aws_lambda_permission" "ssm_allow_cloudwatch_trigger" {
-  statement_id  = "AllowExecutionFromCloudWatch"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.ssm_automation_trigger_lambda.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.ssm_build_schedule.arn
-}
+# resource "aws_lambda_permission" "ssm_allow_cloudwatch_trigger" {
+#   statement_id  = "AllowExecutionFromCloudWatch"
+#   action        = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.ssm_automation_trigger_lambda.function_name
+#   principal     = "events.amazonaws.com"
+#   source_arn    = aws_cloudwatch_event_rule.ssm_build_schedule.arn
+# }
 
 ### ============================================= ###
 ### Lambda to trigger                             ###
@@ -99,29 +108,29 @@ resource "aws_lambda_permission" "ssm_allow_cloudwatch_trigger" {
 # }
 
 
-resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
-  filename         = "${path.module}/lambda/ssm_execute/function.zip"
-  function_name    = "ssm-eks-trigger-automation"
-  role             = aws_iam_role.execute_ssm_lambda_role.arn
-  handler          = "index.lambda_handler"
-  source_code_hash = filebase64sha256("${path.module}/lambda/ssm_execute/function.zip")
-  runtime          = "python3.6"
+# resource "aws_lambda_function" "ssm_automation_trigger_lambda" {
+#   filename         = "${path.module}/lambda/ssm_execute/function.zip"
+#   function_name    = "ssm-eks-trigger-automation-${random_id.random_hex.hex}"
+#   role             = aws_iam_role.execute_ssm_lambda_role.arn
+#   handler          = "index.lambda_handler"
+#   source_code_hash = filebase64sha256("${path.module}/lambda/ssm_execute/function.zip")
+#   runtime          = "python3.6"
 
-  environment {
-    variables = {
-      ssm_doc        = aws_ssm_document.eks_selinux.name
-      eks_versions   = var.eks_versions_to_support
-      dynamodb_table = aws_dynamodb_table.ssm_eks_selinux_table.id
-      time_delta     = var.time_delta
-    }
-  }
-}
+#   environment {
+#     variables = {
+#       ssm_doc        = aws_ssm_document.eks_selinux.name
+#       eks_versions   = var.eks_versions_to_support
+#       dynamodb_table = aws_dynamodb_table.ssm_eks_selinux_table.id
+#       time_delta     = var.time_delta
+#     }
+#   }
+# }
 
 ### ============================================= ###
 ### DynamoDB                                      ###
 ### ============================================= ###
 resource "aws_dynamodb_table" "ssm_eks_selinux_table" {
-  name           = "ssm-eks-selinux-build"
+  name           = "ssm-eks-selinux-build-${random_id.random_hex.hex}"
   billing_mode   = "PROVISIONED"
   read_capacity  = 1
   write_capacity = 1
@@ -142,13 +151,13 @@ resource "aws_dynamodb_table" "ssm_eks_selinux_table" {
 ### ============================================= ###
 ### S3 Bucket for Scripts                         ###
 ### ============================================= ###
-resource "random_id" "bucket_hex" {
+resource "random_id" "random_hex" {
 
   byte_length = 8
 }
 
 resource "aws_s3_bucket" "eks_ami_artifacts_bucket" {
-  bucket        = "eks-ami-artifacts-bucket-${random_id.bucket_hex.hex}"
+  bucket        = "eks-ami-artifacts-bucket-${random_id.random_hex.hex}"
   acl           = "private"
   force_destroy = true
   versioning {
@@ -189,6 +198,22 @@ resource "aws_s3_bucket_object" "upload_cluster_autoscaler_module" {
   etag                   = filemd5("${path.module}/scripts/cluster-autoscaler.pp")
 }
 
+resource "aws_s3_bucket_object" "upload_hsbc-hosthame-awsid" {
+  key                    = "scripts/hsbc-hosthame-awsid"
+  bucket                 = aws_s3_bucket.eks_ami_artifacts_bucket.id
+  source                 = "${path.module}/scripts/hsbc-hosthame-awsid"
+  server_side_encryption = "AES256"
+  etag                   = filemd5("${path.module}/scripts/hsbc-hosthame-awsid")
+}
+
+resource "aws_s3_bucket_object" "upload_hsbc-hosthame-id" {
+  key                    = "scripts/hsbc-hosthame-id.service"
+  bucket                 = aws_s3_bucket.eks_ami_artifacts_bucket.id
+  source                 = "${path.module}/scripts/hsbc-hosthame-id.service"
+  server_side_encryption = "AES256"
+  etag                   = filemd5("${path.module}/scripts/hsbc-hosthame-id.service")
+}
+
 resource "aws_s3_bucket_policy" "policy_eks_ami_artifacts_bucket" {
   bucket = aws_s3_bucket.eks_ami_artifacts_bucket.id
 
@@ -199,7 +224,7 @@ data "aws_iam_policy_document" "policy_definition_eks_ami_artifacts_bucket" {
   statement {
     principals {
       type        = "AWS"
-      identifiers = [var.eks_ami_artifacts_bucket_admin]
+      identifiers = [var.eks_ami_artifacts_bucket_admin, "arn:aws:iam::336014965067:role/adminrole"]
     }
 
     actions = [
@@ -232,5 +257,3 @@ data "aws_iam_policy_document" "policy_definition_eks_ami_artifacts_bucket" {
     ]
   }
 }
-
-

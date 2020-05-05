@@ -3,7 +3,7 @@ Build Instance Role -- Attached to instance when building custom AMI
 */
 ## Role
 resource "aws_iam_role" "ssm_build_instance_role" {
-  name = "ssm-eks-selinux-instance-role"
+  name = "ssm-eks-selinux-instance-role-${random_id.random_hex.hex}"
 
   assume_role_policy = <<EOF
 {
@@ -23,7 +23,7 @@ EOF
 }
 # Role Policy
 resource "aws_iam_policy" "ssm_build_instance_role_policy" {
-  name   = "ssm-eks-selinux-build-instancerole-policy"
+  name   = "ssm-eks-selinux-build-instancerole-policy-${random_id.random_hex.hex}"
   path   = "/"
   policy = data.aws_iam_policy_document.ssm_build_instance_role_policy_doc.json
 }
@@ -96,11 +96,30 @@ data "aws_iam_policy_document" "ssm_build_instance_role_policy_doc" {
       "*",
     ]
   }
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject"
+    ]
+    resources = [
+      "*",
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole"
+    ]
+    resources = [
+      var.ssm_instance_assume_role
+    ]
+  }
 
 }
 # EC2 instance Profile
 resource "aws_iam_instance_profile" "ssm_build_instance_profile" {
-  name = "ssm-eks-selinux-build-instance-profile"
+  name = "ssm-eks-selinux-build-instance-profile-${random_id.random_hex.hex}"
   role = aws_iam_role.ssm_build_instance_role.name
 }
 
@@ -116,7 +135,7 @@ Build Automation Role -- Assumed by SSM when running automation
 
 # Role
 resource "aws_iam_role" "ssm_build_automation_role" {
-  name = "ssm-eks-selinux-automation-role"
+  name = "ssm-eks-selinux-automation-role-${random_id.random_hex.hex}"
 
   assume_role_policy = <<EOF
 {
@@ -139,7 +158,7 @@ EOF
 
 # Role Policy
 resource "aws_iam_policy" "ssm_build_automation_role_policy" {
-  name   = "ssm-eks-selinux-automation-role-policy"
+  name   = "ssm-eks-selinux-automation-role-policy-${random_id.random_hex.hex}"
   path   = "/"
   policy = data.aws_iam_policy_document.ssm_build_automation_role_policy_doc.json
 }
@@ -185,6 +204,37 @@ data "aws_iam_policy_document" "ssm_build_automation_role_policy_doc" {
   }
 
   statement {
+    sid    = "ExtraEKSFunctionalTests"
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeSubnets",
+      "ec2:DescribeKeyPairs",
+      "ec2:DescribeVpcs",
+      "ec2:CreateSecurityGroup",
+      "ec2:DescribeSecurityGroups",
+      "ec2:DeleteSecurityGroup",
+      "ec2:AuthorizeSecurityGroupIngress",
+      "ec2:AuthorizeSecurityGroupEgress",
+      "ec2:RevokeSecurityGroupEgress",
+      "ec2:RevokeSecurityGroupIngress",
+      "autoscaling:*",
+      "iam:CreateRole",
+      "iam:PassRole",
+      "iam:CreateInstanceProfile",
+      "iam:DeleteInstanceProfile",
+      "iam:AttachRolePolicy",
+      "iam:DetachRolePolicy",
+      "iam:DeleteRole",
+      "iam:GetRole",
+      "iam:RemoveRoleFromInstanceProfile",
+      "iam:AddRoleToInstanceProfile"
+    ]
+    resources = [
+      "*",
+    ]
+  }
+
+  statement {
     effect = "Allow"
     actions = [
       "ssm:*"
@@ -204,16 +254,6 @@ data "aws_iam_policy_document" "ssm_build_automation_role_policy_doc" {
       "arn:aws:sns:*:*:scanFactory*",
     ]
   }
-
-  statement {
-    effect = "Allow"
-    actions = [
-      "iam:PassRole"
-    ]
-    resources = [
-      aws_iam_role.ssm_build_instance_role.arn
-    ]
-  }
 }
 #Policy attach
 resource "aws_iam_role_policy_attachment" "ssm_build_automation_policy_attachment" {
@@ -226,7 +266,7 @@ Execute SSM Automation Role -- Assumed by Lambda when triggering automation
 */
 
 resource "aws_iam_role" "execute_ssm_lambda_role" {
-  name = "ssm-eks-ssm-automation-trigger-role"
+  name = "ssm-eks-ssm-automation-trigger-role-${random_id.random_hex.hex}"
 
   assume_role_policy = <<EOF
 {
@@ -246,7 +286,7 @@ EOF
 }
 # Role Policy
 resource "aws_iam_policy" "execute_ssm_lambda_role_policy" {
-  name   = "ssm-eks-lambda-automation-trigger"
+  name   = "ssm-eks-lambda-automation-trigger-${random_id.random_hex.hex}"
   path   = "/"
   policy = data.aws_iam_policy_document.execute_ssm_lambda_role_policy_doc.json
 }
