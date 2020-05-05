@@ -1,0 +1,11 @@
+[Unit]
+Description=Set hostname to aws instance ID
+After=network.tartgt syslog.target cloud-config.target
+Wants=network.target
+
+[Service]
+ExecStart=/usr/lib/systemd/hsbc-hostname-awsid
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
