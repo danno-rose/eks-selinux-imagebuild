@@ -1,0 +1,7 @@
+- hosts: localhost
+  user: drosea
+  connection: local
+  tasks:
+    - name: test_var
+      debug: msg="Hello world."
+      when: eks_build is undefined
