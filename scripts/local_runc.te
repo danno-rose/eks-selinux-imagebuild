@@ -1,0 +1,9 @@
+module local_runc 1.0;
+
+require {
+type unlabeled_t;
+type unconfined_service_t;
+class key create;
+}
+
+allow unconfined_service_t unlabeled_t:key create;
